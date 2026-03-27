@@ -30,15 +30,19 @@ function TickerItem({ item }) {
 
 export default function MarketTicker() {
   const [data, setData] = useState(FALLBACK_DATA)
+  const [lastUpdate, setLastUpdate] = useState(null)
+  const [isLive, setIsLive] = useState(false)
 
   const fetchData = async () => {
     try {
       const result = await fetchMarketMovers()
       if (result?.indices?.length) {
         setData(result.indices)
+        setIsLive(true)
       }
+      setLastUpdate(new Date())
     } catch {
-      // keep fallback data
+      setLastUpdate(new Date())
     }
   }
 
@@ -51,11 +55,15 @@ export default function MarketTicker() {
   // Duplicate items for seamless loop
   const items = [...data, ...data]
 
+  const timeLabel = lastUpdate
+    ? lastUpdate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+    : null
+
   return (
     <div className="bg-white border-b border-border overflow-hidden no-print">
       <div className="flex items-center h-8">
-        <div className="shrink-0 flex items-center justify-center h-full px-3 bg-primary text-white text-xs font-semibold tracking-wide">
-          LIVE
+        <div className={`shrink-0 flex items-center justify-center h-full px-3 text-white text-xs font-semibold tracking-wide ${isLive ? 'bg-primary' : 'bg-slate-400'}`}>
+          {isLive ? 'LIVE' : 'DEMO'}
         </div>
         <div className="overflow-hidden flex-1">
           <div className="flex ticker-scroll">
@@ -64,6 +72,11 @@ export default function MarketTicker() {
             ))}
           </div>
         </div>
+        {timeLabel && (
+          <div className="shrink-0 px-3 text-xs text-slate-400 font-mono whitespace-nowrap">
+            Stand: {timeLabel}
+          </div>
+        )}
       </div>
     </div>
   )
