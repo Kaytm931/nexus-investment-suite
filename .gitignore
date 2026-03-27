@@ -1,0 +1,76 @@
+# ── NEXUS generated / user-specific files ──────────────────────────────────
+
+# Database (user portfolio data)
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Perplexity browser session (contains login cookies — never commit!)
+sessions/
+
+# Python requirements installed marker
+backend/.installed
+
+# Downloaded vendor JS (downloaded automatically at startup)
+frontend/vendor/
+
+# ── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+
+# ── Node.js (if any tooling is added later) ───────────────────────────────────
+node_modules/
+npm-debug.log*
+
+# ── OS ───────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+*.lnk
+
+# ── Editor ───────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.env
+.env.local
+.env.*.local
+config.json
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+logs/
+*.log
+
+# ── Temporary files ──────────────────────────────────────────────────────────
+tmp/
+temp/
+*.tmp
+*.bak

@@ -1,0 +1,506 @@
+{
+  "Insurance": {
+    "display_name": "Insurance",
+    "sector_type": "Financials",
+    "metrics": {
+      "valuation": ["P/EV", "P/Book", "P/E_TTM"],
+      "quality": ["Combined_Ratio", "Loss_Ratio", "ROE", "Investment_Yield"],
+      "growth": ["Premium_Growth", "EPS_Growth"],
+      "risk": ["Solvency_II_Ratio", "Debt_to_Equity", "Beta"]
+    },
+    "dcf_inputs": {
+      "primary_cashflow": "operating_cashflow",
+      "preferred_method": "P/EV + Dividend Discount Model",
+      "discount_rate": 0.09,
+      "terminal_growth": 0.025,
+      "notes": "Use P/Embedded Value for life insurers. Combined ratio <95% is excellent."
+    },
+    "red_flags": {
+      "combined_ratio_above": 105,
+      "solvency_ratio_below": 150,
+      "debt_to_equity_above": 0.5,
+      "roe_below": 0.08
+    },
+    "geopolitical_risks": [
+      "Climate change increasing catastrophe claims",
+      "Regulatory changes (Solvency II, IFRS 17)",
+      "Low interest rate environment compressing investment income",
+      "Cyber risk accumulation"
+    ],
+    "scoring_weights": {
+      "valuation": 0.30,
+      "quality": 0.30,
+      "risk": 0.25,
+      "growth": 0.15
+    }
+  },
+  "Banking": {
+    "display_name": "Banking & Financial Services",
+    "sector_type": "Financials",
+    "metrics": {
+      "valuation": ["P/TBV", "P/E_TTM", "P/E_Forward"],
+      "quality": ["CET1_Ratio", "NIM", "ROE", "Cost_to_Income", "ROA"],
+      "growth": ["Loan_Growth", "NII_Growth", "EPS_Growth"],
+      "risk": ["NPL_Ratio", "Coverage_Ratio", "Beta", "Leverage_Ratio"]
+    },
+    "dcf_inputs": {
+      "primary_cashflow": "net_income",
+      "preferred_method": "Excess Returns Model (ROE vs. Cost of Equity) + P/TBV",
+      "discount_rate": 0.10,
+      "terminal_growth": 0.02,
+      "notes": "Banks don't have traditional free cashflow. Use excess returns or dividend discount. CET1 > 12% is strong."
+    },
+    "red_flags": {
+      "npl_ratio_above": 0.05,
+      "cet1_below": 0.10,
+      "roe_below": 0.08,
+      "nim_below": 0.015
+    },
+    "geopolitical_risks": [
+      "Interest rate risk and yield curve flattening",
+      "Regulatory capital requirements (Basel IV)",
+      "Credit cycle deterioration in recession",
+      "Digital banking disruption (neobanks, fintech)",
+      "Geopolitical sanctions affecting cross-border operations"
+    ],
+    "scoring_weights": {
+      "valuation": 0.30,
+      "quality": 0.30,
+      "risk": 0.25,
+      "growth": 0.15
+    }
+  },
+  "Technology": {
+    "display_name": "Technology",
+    "sector_type": "Growth",
+    "metrics": {
+      "valuation": ["EV_EBITDA", "P/E_Forward", "P/S", "EV_FCF"],
+      "quality": ["FCF_Margin", "Gross_Margin", "ROIC", "R&D_to_Revenue", "Net_Dollar_Retention"],
+      "growth": ["Revenue_Growth_YoY", "ARR_Growth", "EPS_Growth", "PEG"],
+      "risk": ["Beta", "Customer_Concentration", "Debt_to_EBITDA"]
+    },
+    "dcf_inputs": {
+      "primary_cashflow": "free_cashflow",
+      "preferred_method": "DCF (5-10 year growth phase) + EV/FCF comparison",
+      "discount_rate": 0.10,
+      "terminal_growth": 0.03,
+      "notes": "High-growth tech requires longer DCF horizon. FCF margin >20% is excellent. R&D is an investment, not just a cost."
+    },
+    "red_flags": {
+      "revenue_growth_below": 0.05,
+      "fcf_margin_below": 0.05,
+      "ev_revenue_above": 15,
+      "gross_margin_below": 0.50
+    },
+    "geopolitical_risks": [
+      "US-China tech war and export controls",
+      "EU digital regulation (DMA, GDPR, AI Act)",
+      "Semiconductor supply chain concentration",
+      "Talent scarcity and wage inflation",
+      "Cybersecurity threats and data breaches"
+    ],
+    "scoring_weights": {
+      "valuation": 0.15,
+      "quality": 0.25,
+      "risk": 0.20,
+      "growth": 0.40
+    }
+  },
+  "Energy_Oil_Gas": {
+    "display_name": "Energy (Oil & Gas)",
+    "sector_type": "Cyclical",
+    "metrics": {
+      "valuation": ["EV_BOE", "EV_EBITDA", "P/E_Normalized", "EV_DACF"],
+      "quality": ["FCF_Yield", "ROACE", "Reserve_Replacement_Ratio", "Breakeven_Oil_Price"],
+      "growth": ["Production_Growth", "Reserve_Life_Index", "Dividend_Growth"],
+      "risk": ["Beta", "Debt_to_EBITDA", "Oil_Price_Sensitivity", "Geopolitical_Exposure"]
+    },
+    "dcf_inputs": {
+      "primary_cashflow": "operating_cashflow",
+      "preferred_method": "NAV (Net Asset Value) of reserves + EV/DACF",
+      "discount_rate": 0.10,
+      "terminal_growth": 0.01,
+      "notes": "Use mid-cycle oil price ($60-70/bbl Brent) for normalization. Reserve Life Index >10 years preferred."
+    },
+    "red_flags": {
+      "breakeven_above_usd": 65,
+      "reserve_life_below_years": 8,
+      "debt_to_ebitda_above": 2.5,
+      "roace_below": 0.08
+    },
+    "geopolitical_risks": [
+      "OPEC+ production decisions and price wars",
+      "Energy transition and stranded asset risk",
+      "Geopolitical instability in producing regions (Middle East, Russia)",
+      "Carbon taxation and ESG divestment pressure",
+      "US shale production dynamics"
+    ],
+    "scoring_weights": {
+      "valuation": 0.25,
+      "quality": 0.25,
+      "risk": 0.30,
+      "growth": 0.20
+    }
+  },
+  "Automotive": {
+    "display_name": "Automotive",
+    "sector_type": "Cyclical",
+    "metrics": {
+      "valuation": ["EV_EBITDA", "P/E_Normalized", "P/S", "EV_EBIT"],
+      "quality": ["EBIT_Margin", "Industrial_FCF", "ROIC", "Order_Backlog"],
+      "growth": ["EV_Sales_Share", "Revenue_Growth", "EPS_Growth"],
+      "risk": ["Beta", "Debt_to_Equity", "Pension_Liabilities", "Commodity_Exposure"]
+    },
+    "dcf_inputs": {
+      "primary_cashflow": "industrial_free_cashflow",
+      "preferred_method": "Sum-of-parts (automotive + financial services + EV/software) + EV/EBITDA",
+      "discount_rate": 0.10,
+      "terminal_growth": 0.015,
+      "notes": "Separate industrial FCF from financial services division. EV share >30% commands premium multiple."
+    },
+    "red_flags": {
+      "ebit_margin_below": 0.04,
+      "industrial_fcf_negative": true,
+      "ev_share_below": 0.15,
+      "debt_to_equity_above": 1.5
+    },
+    "geopolitical_risks": [
+      "EV transition speed uncertainty",
+      "China market exposure and local competition",
+      "Semiconductor and battery supply chain disruption",
+      "EU CO2 fleet emission targets and fines",
+      "Tariff and trade war risk",
+      "UAW/labor strike risk in North America"
+    ],
+    "scoring_weights": {
+      "valuation": 0.25,
+      "quality": 0.25,
+      "risk": 0.30,
+      "growth": 0.20
+    }
+  },
+  "Healthcare_Pharma": {
+    "display_name": "Healthcare & Pharma",
+    "sector_type": "Blend",
+    "metrics": {
+      "valuation": ["EV_EBITDA", "P/E_Forward", "P/S", "EV_FCF"],
+      "quality": ["R&D_to_Revenue", "Pipeline_Phase3_Count", "FCF_Margin", "Gross_Margin"],
+      "growth": ["Revenue_Growth", "Pipeline_Value", "Patent_Cliff_Impact"],
+      "risk": ["Beta", "Patent_Cliff_Exposure", "Litigation_Risk", "Pricing_Pressure"]
+    },
+    "dcf_inputs": {
+      "primary_cashflow": "free_cashflow",
+      "preferred_method": "rNPV (risk-adjusted Net Present Value) for pipeline + DCF for marketed products",
+      "discount_rate": 0.09,
+      "terminal_growth": 0.025,
+      "notes": "Discount pipeline at 12-15% for Phase 2, 8-10% for Phase 3. Patent cliff creates step-down in DCF."
+    },
+    "red_flags": {
+      "patent_cliff_revenue_pct_above": 0.30,
+      "r_and_d_to_revenue_below": 0.10,
+      "pipeline_phase3_below": 2,
+      "fcf_margin_below": 0.10
+    },
+    "geopolitical_risks": [
+      "US drug price negotiation (IRA) and reference pricing",
+      "China pharma market access and IP protection",
+      "EU HTA harmonization and pricing pressure",
+      "FDA/EMA approval uncertainty",
+      "Biosimilar competition for biologics"
+    ],
+    "scoring_weights": {
+      "valuation": 0.20,
+      "quality": 0.30,
+      "risk": 0.25,
+      "growth": 0.25
+    }
+  },
+  "Utilities": {
+    "display_name": "Utilities",
+    "sector_type": "Defensive",
+    "metrics": {
+      "valuation": ["EV_EBITDA", "P/E_TTM", "P/FCF", "EV_RAB"],
+      "quality": ["FFO_to_Debt", "EBITDA_Margin", "ROE", "Dividend_Coverage"],
+      "growth": ["Renewable_Capacity_Growth", "RAB_Growth", "EPS_Growth", "Dividend_Growth"],
+      "risk": ["Beta", "Debt_to_EBITDA", "Regulatory_Risk", "Interest_Coverage"]
+    },
+    "dcf_inputs": {
+      "primary_cashflow": "funds_from_operations",
+      "preferred_method": "RAB (Regulatory Asset Base) valuation + DCF of regulated returns",
+      "discount_rate": 0.07,
+      "terminal_growth": 0.02,
+      "notes": "Regulated utilities: value = RAB × (1 + premium). FFO/Debt > 20% is investment grade. WACC = regulated WACC."
+    },
+    "red_flags": {
+      "ffo_to_debt_below": 0.12,
+      "debt_to_ebitda_above": 5.0,
+      "interest_coverage_below": 2.5,
+      "payout_ratio_above": 0.90
+    },
+    "geopolitical_risks": [
+      "Regulatory tariff resets reducing allowed returns",
+      "Permitting delays for renewable projects",
+      "Stranded asset risk from coal/gas phase-out",
+      "Grid infrastructure aging and upgrade costs",
+      "Political pressure on electricity prices"
+    ],
+    "scoring_weights": {
+      "valuation": 0.35,
+      "quality": 0.35,
+      "risk": 0.20,
+      "growth": 0.10
+    }
+  },
+  "Real_Estate_REIT": {
+    "display_name": "Real Estate & REITs",
+    "sector_type": "Defensive",
+    "metrics": {
+      "valuation": ["P_FFO", "P_AFFO", "P_NAV", "EV_EBITDA"],
+      "quality": ["FFO_Margin", "Occupancy_Rate", "WAULT", "Debt_to_GAV"],
+      "growth": ["NAV_Growth", "FFO_per_Share_Growth", "AFFO_per_Share_Growth", "Rent_Growth"],
+      "risk": ["LTV", "Interest_Coverage", "Beta", "Tenant_Concentration"]
+    },
+    "dcf_inputs": {
+      "primary_cashflow": "funds_from_operations",
+      "preferred_method": "NAV (Net Asset Value) + P/FFO comparison",
+      "discount_rate": 0.075,
+      "terminal_growth": 0.02,
+      "notes": "Core metric is FFO (Funds from Operations), not earnings. NAV = market value of properties minus debt. LTV < 40% is conservative."
+    },
+    "red_flags": {
+      "ltv_above": 0.55,
+      "occupancy_below": 0.90,
+      "wault_below_years": 3,
+      "interest_coverage_below": 2.0
+    },
+    "geopolitical_risks": [
+      "Rising interest rates increasing cap rates and reducing NAV",
+      "Remote work reducing office demand structurally",
+      "E-commerce impact on retail property demand",
+      "Construction cost inflation",
+      "Local rent control regulation risk"
+    ],
+    "scoring_weights": {
+      "valuation": 0.35,
+      "quality": 0.35,
+      "risk": 0.20,
+      "growth": 0.10
+    }
+  },
+  "Mining_Materials": {
+    "display_name": "Mining & Materials",
+    "sector_type": "Cyclical",
+    "metrics": {
+      "valuation": ["EV_EBITDA", "EV_Tonne", "P_NAV", "EV_FCF"],
+      "quality": ["AISC", "ROIC", "FCF_Yield", "Reserve_Life"],
+      "growth": ["Production_Growth", "Reserve_Growth", "Dividend_Growth"],
+      "risk": ["Beta", "Debt_to_EBITDA", "Country_Risk", "Commodity_Price_Sensitivity"]
+    },
+    "dcf_inputs": {
+      "primary_cashflow": "free_cashflow",
+      "preferred_method": "NAV of mineral reserves + EV/EBITDA at mid-cycle commodity price",
+      "discount_rate": 0.08,
+      "terminal_growth": 0.01,
+      "notes": "AISC (All-In Sustaining Cost) is the key profitability metric. Use mid-cycle commodity prices, not spot. Reserve Life > 15 years preferred."
+    },
+    "red_flags": {
+      "aisc_above_spot_pct": 0.85,
+      "reserve_life_below_years": 10,
+      "debt_to_ebitda_above": 2.0,
+      "roic_below": 0.08
+    },
+    "geopolitical_risks": [
+      "Mining jurisdiction risk (nationalization, royalty increases)",
+      "Commodity price volatility",
+      "Water scarcity and environmental permitting",
+      "Energy transition: copper/lithium demand surge vs. coal decline",
+      "Labor disputes in key mining regions"
+    ],
+    "scoring_weights": {
+      "valuation": 0.25,
+      "quality": 0.25,
+      "risk": 0.30,
+      "growth": 0.20
+    }
+  },
+  "Telecom": {
+    "display_name": "Telecommunications",
+    "sector_type": "Defensive",
+    "metrics": {
+      "valuation": ["EV_EBITDA", "EV_Subscriber", "P_FCF", "EV_ARPU"],
+      "quality": ["ARPU", "EBITDA_Margin", "Churn_Rate", "FCF_Conversion"],
+      "growth": ["5G_Progress", "Subscriber_Growth", "Revenue_Growth", "ARPU_Growth"],
+      "risk": ["Beta", "Debt_to_EBITDA", "Regulatory_Risk", "Infrastructure_Capex"]
+    },
+    "dcf_inputs": {
+      "primary_cashflow": "free_cashflow",
+      "preferred_method": "EV/EBITDA + EV/Subscriber + DCF of subscriber economics",
+      "discount_rate": 0.075,
+      "terminal_growth": 0.015,
+      "notes": "Capex-intensive business. EBITDA - Capex = ServiceFCF. Churn < 1.5% monthly is excellent. 5G monetization is key thesis."
+    },
+    "red_flags": {
+      "churn_above_monthly": 0.025,
+      "debt_to_ebitda_above": 3.5,
+      "arpu_declining": true,
+      "ebitda_margin_below": 0.30
+    },
+    "geopolitical_risks": [
+      "Spectrum auction costs reducing FCF",
+      "5G infrastructure sharing regulation",
+      "Cable/satellite substitution pressure",
+      "Net neutrality regulation",
+      "Huawei ban and equipment replacement costs in some markets"
+    ],
+    "scoring_weights": {
+      "valuation": 0.35,
+      "quality": 0.35,
+      "risk": 0.20,
+      "growth": 0.10
+    }
+  },
+  "Consumer_Staples": {
+    "display_name": "Consumer Staples",
+    "sector_type": "Defensive",
+    "metrics": {
+      "valuation": ["EV_EBITDA", "P/E_Forward", "P/E_TTM", "P/S"],
+      "quality": ["Gross_Margin", "Organic_Growth", "FCF_Conversion", "Brand_Value_Moat"],
+      "growth": ["Organic_Revenue_Growth", "Pricing_Power", "Emerging_Market_Exposure"],
+      "risk": ["Beta", "Commodity_Cost_Sensitivity", "Private_Label_Competition", "Debt_to_EBITDA"]
+    },
+    "dcf_inputs": {
+      "primary_cashflow": "free_cashflow",
+      "preferred_method": "DCF + EV/EBITDA comparison to sector peers",
+      "discount_rate": 0.075,
+      "terminal_growth": 0.025,
+      "notes": "Premium on strong brands (pricing power). Organic growth separates volume from price. FCF conversion > 90% is excellent."
+    },
+    "red_flags": {
+      "organic_growth_below": -0.02,
+      "gross_margin_declining_bps": 200,
+      "private_label_share_above": 0.35,
+      "debt_to_ebitda_above": 3.0
+    },
+    "geopolitical_risks": [
+      "Emerging market currency devaluation",
+      "Commodity input cost inflation (grains, oils, packaging)",
+      "Private label competition intensification",
+      "Sugar/salt/fat taxation and health regulation",
+      "Supply chain disruption in key sourcing regions"
+    ],
+    "scoring_weights": {
+      "valuation": 0.35,
+      "quality": 0.35,
+      "risk": 0.20,
+      "growth": 0.10
+    }
+  },
+  "Defense_Aerospace": {
+    "display_name": "Defense & Aerospace",
+    "sector_type": "Blend",
+    "metrics": {
+      "valuation": ["EV_EBITDA", "P/E_Forward", "P/FCF", "EV_EBIT"],
+      "quality": ["EBIT_Margin", "FCF_Conversion", "Backlog_to_Revenue", "ROIC"],
+      "growth": ["Order_Backlog_Growth", "Revenue_Growth", "EPS_Growth"],
+      "risk": ["Beta", "Program_Concentration", "Government_Budget_Dependency", "Debt_to_EBITDA"]
+    },
+    "dcf_inputs": {
+      "primary_cashflow": "free_cashflow",
+      "preferred_method": "DCF + EV/EBITDA + backlog-based visibility analysis",
+      "discount_rate": 0.085,
+      "terminal_growth": 0.025,
+      "notes": "Backlog/Revenue > 3x provides 3 years of revenue visibility. FCF conversion > 85% is strong. Government budget cycles create lumpy revenue."
+    },
+    "red_flags": {
+      "backlog_to_revenue_below": 1.5,
+      "fcf_conversion_below": 0.70,
+      "single_customer_above_pct": 0.50,
+      "ebit_margin_below": 0.06
+    },
+    "geopolitical_risks": [
+      "Defense budget cuts in peace dividend scenarios",
+      "Export control restrictions on advanced systems",
+      "Program cancellation or delay risk",
+      "NATO burden-sharing dynamics",
+      "Ukraine/Middle East conflict escalation or de-escalation impact"
+    ],
+    "scoring_weights": {
+      "valuation": 0.25,
+      "quality": 0.30,
+      "risk": 0.20,
+      "growth": 0.25
+    }
+  },
+  "Alt_Asset_Manager": {
+    "display_name": "Alternative Asset Managers",
+    "sector_type": "Financials",
+    "metrics": {
+      "valuation": ["P_FRE", "P_DE", "EV_FRE", "Price_to_AUM"],
+      "quality": ["FRE_Margin", "Gross_IRR", "AUM_Retention", "Management_Fee_Rate"],
+      "growth": ["AUM_Growth", "FRE_Growth", "Fundraising_Pipeline"],
+      "risk": ["Beta", "Carried_Interest_Volatility", "Vintage_Year_Concentration", "Key_Man_Risk"]
+    },
+    "dcf_inputs": {
+      "primary_cashflow": "fee_related_earnings",
+      "preferred_method": "P/FRE (Price to Fee-Related Earnings) + DCF of FRE stream",
+      "discount_rate": 0.10,
+      "terminal_growth": 0.03,
+      "notes": "FRE (Fee-Related Earnings) = stable, recurring. Distribute earnings (DE) includes volatile carried interest. P/FRE < 25x is attractive. AUM growth is the key driver."
+    },
+    "red_flags": {
+      "fre_margin_below": 0.30,
+      "aum_growth_below": 0.05,
+      "p_fre_above": 35,
+      "fundraising_declining": true
+    },
+    "geopolitical_risks": [
+      "Institutional LP allocation shifts away from alternatives",
+      "Rising rates increasing hurdle rates and reducing carried interest",
+      "Regulatory scrutiny of fee structures",
+      "Exit market closure (IPO/M&A downturn)",
+      "Denominator effect forcing LP redemptions"
+    ],
+    "scoring_weights": {
+      "valuation": 0.25,
+      "quality": 0.30,
+      "risk": 0.20,
+      "growth": 0.25
+    }
+  },
+  "ETF_Index": {
+    "display_name": "ETF & Index Funds",
+    "sector_type": "ETF",
+    "metrics": {
+      "valuation": ["Weighted_PE", "Weighted_PB", "Weighted_EV_EBITDA", "Discount_to_NAV"],
+      "quality": ["TER", "Tracking_Difference", "AUM_Size", "Replication_Method"],
+      "growth": ["AUM_Growth_1Y", "Dividend_Growth_5Y", "Earnings_Growth_Weighted"],
+      "risk": ["Top10_Concentration", "Country_Concentration", "Sector_Concentration", "Liquidity_Spread"]
+    },
+    "dcf_inputs": {
+      "primary_cashflow": "dividend_distributions",
+      "preferred_method": "NAV comparison + Dividend Discount Model for income ETFs",
+      "discount_rate": 0.07,
+      "terminal_growth": 0.02,
+      "notes": "ETFs don't DCF like stocks. Focus on TER (lower = better), tracking difference (vs index), and underlying portfolio quality."
+    },
+    "red_flags": {
+      "ter_above": 0.50,
+      "tracking_diff_above": 0.50,
+      "top10_concentration_above": 0.50,
+      "aum_below_mio": 100
+    },
+    "geopolitical_risks": [
+      "Index rebalancing causing forced buying/selling",
+      "Counterparty risk in synthetic ETFs",
+      "Liquidity mismatch in bond ETFs during stress",
+      "Currency risk for unhedged international exposure",
+      "Single-country concentration in emerging market ETFs"
+    ],
+    "scoring_weights": {
+      "valuation": 0.25,
+      "quality": 0.40,
+      "risk": 0.25,
+      "growth": 0.10
+    }
+  }
+}
