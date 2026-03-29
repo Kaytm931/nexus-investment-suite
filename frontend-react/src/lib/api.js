@@ -2,6 +2,9 @@ import { supabase } from './supabase'
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:7842'
 
+// WebSocket base: http → ws, https → wss
+export const WS_BASE = API_BASE.replace(/^http/, 'ws')
+
 async function getAuthHeaders() {
   const { data: { session } } = await supabase.auth.getSession()
   if (session?.access_token) {
@@ -62,10 +65,10 @@ export async function runElaraScreener(params) {
 
 // ── Altair Analysis ─────────────────────────────────────────────────────────
 
-export async function runAltairAnalysis(ticker, forceRefresh = false) {
+export async function runAltairAnalysis(ticker, forceRefresh = false, sessionId = null) {
   return apiFetch('/api/altair/analyse', {
     method: 'POST',
-    body: JSON.stringify({ ticker, force_refresh: forceRefresh }),
+    body: JSON.stringify({ ticker, force_refresh: forceRefresh, session_id: sessionId }),
   })
 }
 

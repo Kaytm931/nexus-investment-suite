@@ -12,7 +12,10 @@ from pathlib import Path
 from contextlib import asynccontextmanager
 from typing import Optional, Dict, List
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from dotenv import load_dotenv
+load_dotenv()
+
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Header, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,10 +24,16 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 import database
 from database import (
-    init_db, get_all_positions, add_position, update_position,
-    delete_position, save_altair_report, get_altair_report,
-    save_elara_results, get_elara_results
+    init_db,
+    get_all_positions as sqlite_get_all_positions,
+    add_position as sqlite_add_position,
+    update_position as sqlite_update_position,
+    delete_position as sqlite_delete_position,
+    update_position_price as sqlite_update_position_price,
+    save_altair_report, get_altair_report,
+    save_elara_results, get_elara_results,
 )
+import supabase_db
 import models
 from models import (
     ElaraRequest, AltairRequest,
@@ -432,9 +441,15 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "https://nexus-investment-suite.vercel.app",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -764,53 +779,136 @@ Starte jetzt mit Phase 1: Recherchiere die optimale Bewertungsmethodik für dies
         "cached": False,
     }
 
+# ── Auth dependency ────────────────────────────────────────────────────────────
+
+async def get_current_user(
+    authorization: Optional[str] = Header(default=None),
+) -> Optional[str]:
+    """
+    Extract and validate the Supabase JWT from the Authorization header.
+    Returns the user UUID string, or None if no/invalid token.
+    Falls back gracefully when Supabase is not configured (local dev without env vars).
+    """
+    if not authorization or not authorization.startswith("Bearer "):
+        return None
+    if not supabase_db.is_configured():
+        return None
+    token = authorization.removeprefix("Bearer ")
+    return supabase_db.get_user_from_token(token)
+
+
+def _resolve_portfolio(user_id: Optional[str]) -> Optional[str]:
+    """
+    Return Supabase portfolio_id for the given user.
+    Returns None if Supabase is not configured (triggers SQLite fallback).
+    Raises 503 on DB error.
+    """
+    if not user_id or not supabase_db.is_configured():
+        return None
+    try:
+        return supabase_db.get_or_create_portfolio(user_id)
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"Supabase-Fehler: {exc}")
+
+
+def _sqlite_id(position_id: str) -> int:
+    """Convert str position_id to int for SQLite fallback. Raises 400 on error."""
+    try:
+        return int(position_id)
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=400, detail="Ungültige Position-ID für lokalen Modus")
+
+
 # ── Portfolio ──────────────────────────────────────────────────────────────────
 
 @app.get("/api/portfolio", response_model=List[PortfolioPosition])
-async def get_portfolio():
+async def get_portfolio(user_id: Optional[str] = Depends(get_current_user)):
     """Return all portfolio positions with calculated P&L and weights."""
-    raw_positions = get_all_positions()
+    portfolio_id = _resolve_portfolio(user_id)
+    if portfolio_id:
+        raw_positions = supabase_db.get_all_positions(portfolio_id)
+    else:
+        raw_positions = sqlite_get_all_positions()
     return _enrich_positions(raw_positions)
 
 
 @app.post("/api/portfolio/position", response_model=PortfolioPosition)
-async def create_position(position: PortfolioPositionCreate):
+async def create_position(
+    position: PortfolioPositionCreate,
+    user_id: Optional[str] = Depends(get_current_user),
+):
     """Add a new portfolio position."""
-    created = add_position(
-        ticker=position.ticker,
-        name=position.name,
-        entry_price=position.entry_price,
-        shares=position.shares,
-        purchase_date=position.purchase_date,
-        sector=position.sector,
-        region=position.region,
-    )
+    portfolio_id = _resolve_portfolio(user_id)
+    if portfolio_id:
+        created = supabase_db.add_position(
+            portfolio_id=portfolio_id,
+            ticker=position.ticker,
+            name=position.name,
+            entry_price=position.entry_price,
+            shares=position.shares,
+            purchase_date=position.purchase_date,
+            sector=position.sector,
+            region=position.region,
+        )
+    else:
+        created = sqlite_add_position(
+            ticker=position.ticker,
+            name=position.name,
+            entry_price=position.entry_price,
+            shares=position.shares,
+            purchase_date=position.purchase_date,
+            sector=position.sector,
+            region=position.region,
+        )
+        created["id"] = str(created["id"])
     return _calculate_position_pnl(created, total_value=None)
 
 
 @app.put("/api/portfolio/position/{position_id}", response_model=PortfolioPosition)
-async def update_pos(position_id: int, updates: PortfolioPositionUpdate):
+async def update_pos(
+    position_id: str,
+    updates: PortfolioPositionUpdate,
+    user_id: Optional[str] = Depends(get_current_user),
+):
     """Update an existing portfolio position."""
     update_dict = updates.model_dump(exclude_unset=True)
-    updated = update_position(position_id, update_dict)
+    portfolio_id = _resolve_portfolio(user_id)
+    if portfolio_id:
+        updated = supabase_db.update_position(position_id, update_dict)
+    else:
+        updated = sqlite_update_position(_sqlite_id(position_id), update_dict)
+        if updated:
+            updated["id"] = str(updated["id"])
     if updated is None:
-        raise HTTPException(status_code=404, detail=f"Position {position_id} not found")
+        raise HTTPException(status_code=404, detail=f"Position {position_id} nicht gefunden")
     return _calculate_position_pnl(updated, total_value=None)
 
 
 @app.delete("/api/portfolio/position/{position_id}")
-async def delete_pos(position_id: int):
+async def delete_pos(
+    position_id: str,
+    user_id: Optional[str] = Depends(get_current_user),
+):
     """Delete a portfolio position."""
-    deleted = delete_position(position_id)
+    portfolio_id = _resolve_portfolio(user_id)
+    if portfolio_id:
+        deleted = supabase_db.delete_position(position_id)
+    else:
+        deleted = sqlite_delete_position(_sqlite_id(position_id))
     if not deleted:
-        raise HTTPException(status_code=404, detail=f"Position {position_id} not found")
+        raise HTTPException(status_code=404, detail=f"Position {position_id} nicht gefunden")
     return {"success": True, "deleted_id": position_id}
 
 
 @app.post("/api/portfolio/refresh-prices", response_model=PriceRefreshResult)
-async def refresh_prices():
-    """Refresh current prices for all portfolio positions via yFinance (kostenlos)."""
-    positions = get_all_positions()
+async def refresh_prices(user_id: Optional[str] = Depends(get_current_user)):
+    """Refresh current prices for all portfolio positions via yFinance."""
+    portfolio_id = _resolve_portfolio(user_id)
+    if portfolio_id:
+        positions = supabase_db.get_all_positions(portfolio_id)
+    else:
+        positions = sqlite_get_all_positions()
+
     updated_count = 0
     failed_count = 0
     errors = []
@@ -826,14 +924,17 @@ async def refresh_prices():
         data = price_map.get(pos["ticker"], {})
         price = data.get("current_price")
         if price:
-            database.update_position_price(pos["id"], price)
+            if portfolio_id:
+                supabase_db.update_position_price(pos["id"], price)
+            else:
+                sqlite_update_position_price(int(pos["id"]), price)
+            pos["current_price"] = price
             updated_count += 1
         else:
             failed_count += 1
             errors.append(f"{pos['ticker']}: {data.get('error', 'Preis nicht gefunden')}")
 
-    updated_positions = get_all_positions()
-    enriched = _enrich_positions(updated_positions)
+    enriched = _enrich_positions(positions)
 
     return PriceRefreshResult(
         updated=updated_count,
@@ -844,9 +945,13 @@ async def refresh_prices():
 
 
 @app.get("/api/portfolio/performance", response_model=PerformanceData)
-async def get_performance():
+async def get_performance(user_id: Optional[str] = Depends(get_current_user)):
     """Calculate portfolio performance vs S&P 500 and MSCI World benchmarks."""
-    positions = get_all_positions()
+    portfolio_id = _resolve_portfolio(user_id)
+    if portfolio_id:
+        positions = supabase_db.get_all_positions(portfolio_id)
+    else:
+        positions = sqlite_get_all_positions()
     if not positions:
         return PerformanceData(
             dates=[],
@@ -871,7 +976,7 @@ def _calculate_position_pnl(pos: dict, total_value: Optional[float]) -> Portfoli
     weight = (current_value / total_value * 100) if total_value and total_value > 0 else None
 
     return PortfolioPosition(
-        id=pos["id"],
+        id=str(pos["id"]),  # Always string — handles both UUID and SQLite int IDs
         ticker=pos["ticker"],
         name=pos["name"],
         entry_price=entry,
@@ -991,20 +1096,30 @@ async def altair_analyse_alias(request: AltairRequest):
     return await altair_analyze(request)
 
 @app.get("/api/portfolio/positions")
-async def get_positions():
-    return await get_portfolio()
+async def get_positions(user_id: Optional[str] = Depends(get_current_user)):
+    return await get_portfolio(user_id)
 
 @app.post("/api/portfolio/positions")
-async def create_position_alias(position: PortfolioPositionCreate):
-    return await create_position(position)
+async def create_position_alias(
+    position: PortfolioPositionCreate,
+    user_id: Optional[str] = Depends(get_current_user),
+):
+    return await create_position(position, user_id)
 
 @app.put("/api/portfolio/positions/{position_id}")
-async def update_position_alias(position_id: int, updates: PortfolioPositionUpdate):
-    return await update_pos(position_id, updates)
+async def update_position_alias(
+    position_id: str,
+    updates: PortfolioPositionUpdate,
+    user_id: Optional[str] = Depends(get_current_user),
+):
+    return await update_pos(position_id, updates, user_id)
 
 @app.delete("/api/portfolio/positions/{position_id}")
-async def delete_position_alias(position_id: int):
-    return await delete_pos(position_id)
+async def delete_position_alias(
+    position_id: str,
+    user_id: Optional[str] = Depends(get_current_user),
+):
+    return await delete_pos(position_id, user_id)
 
 @app.post("/api/portfolio/refresh")
 async def refresh_alias():

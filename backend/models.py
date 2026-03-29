@@ -44,9 +44,9 @@ class ElaraRequest(BaseModel):
         default=None,
         description="Optional screening filters"
     )
-    session_id: str = Field(
-        ...,
-        description="WebSocket session ID for progress streaming"
+    session_id: Optional[str] = Field(
+        default=None,
+        description="WebSocket session ID for progress streaming (optional)"
     )
 
 
@@ -72,9 +72,9 @@ class AltairRequest(BaseModel):
         max_length=20,
         description="Stock ticker or ETF ISIN, e.g. 'AAPL', 'MSFT', 'IE00B4L5Y983'"
     )
-    session_id: str = Field(
-        ...,
-        description="WebSocket session ID for progress streaming"
+    session_id: Optional[str] = Field(
+        default=None,
+        description="WebSocket session ID for progress streaming (optional)"
     )
     force_refresh: bool = Field(
         default=False,
@@ -118,7 +118,7 @@ class PortfolioPositionCreate(BaseModel):
 
 class PortfolioPosition(BaseModel):
     """A full portfolio position including calculated fields."""
-    id: int
+    id: str  # UUID string from Supabase (or str-cast int from SQLite fallback)
     ticker: str
     name: str
     entry_price: float

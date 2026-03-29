@@ -158,7 +158,7 @@
   background: #94a3b8;
 }
 
-/* Print styles */
+/* Print styles — optimised for Altair PDF export */
 @media print {
   .no-print {
     display: none !important;
@@ -170,11 +170,36 @@
 
   body {
     font-size: 11pt;
+    background: white !important;
+    color: black !important;
   }
 
+  /* Hide navigation and interactive controls */
+  header, nav, footer,
+  [class*="MarketTicker"],
+  [class*="no-print"] {
+    display: none !important;
+  }
+
+  /* Cards: flat border, no shadows */
   .card {
-    box-shadow: none;
-    border: 1px solid #e2e8f0;
+    box-shadow: none !important;
+    border: 1px solid #cbd5e1 !important;
+    break-inside: avoid;
+    margin-bottom: 12pt;
+  }
+
+  /* Tables should not break mid-row */
+  table { page-break-inside: avoid; }
+  tr    { page-break-inside: avoid; }
+
+  /* Charts (canvas) render as-is */
+  canvas { max-width: 100% !important; }
+
+  /* Max width for readability */
+  .max-w-7xl {
+    max-width: 100% !important;
+    padding: 0 !important;
   }
 }
 

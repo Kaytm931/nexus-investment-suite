@@ -98,6 +98,56 @@ Reports are cached for 7 days.
 
 ---
 
+## Cloud Deployment
+
+### Backend → Render.com
+
+The backend can be deployed as a free web service on Render.com so that portfolio data persists in Supabase instead of an ephemeral local SQLite file.
+
+**Step 1 — Supabase: run the current_price migration**
+
+Open the Supabase SQL Editor and run:
+```sql
+ALTER TABLE positions ADD COLUMN IF NOT EXISTS current_price numeric(18, 4);
+```
+
+**Step 2 — Supabase: disable email confirmations (Beta)**
+
+`Supabase Dashboard → Authentication → Providers → Email → "Enable email confirmations" → OFF → Save`
+
+This lets users log in immediately after registration without needing to confirm their email.
+
+**Step 3 — Render.com: deploy the backend**
+
+1. Create a free account at [render.com](https://render.com)
+2. Click **New → Web Service** → connect your GitHub repo (`Kaytm931/nexus-investment-suite`)
+3. Render will detect `render.yaml` automatically and pre-fill the settings
+4. Set the following **Environment Variables** (under Settings → Environment):
+
+| Variable | Where to get it |
+|---|---|
+| `SUPABASE_URL` | Supabase → Project Settings → API → Project URL |
+| `SUPABASE_SERVICE_KEY` | Supabase → Project Settings → API → service_role key |
+| `TAVILY_API_KEY` | [tavily.com](https://tavily.com) |
+| `ENCRYPTION_KEY` | Run: `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` |
+
+5. Click **Create Web Service** — Render builds and deploys automatically
+6. After deploy, Render shows a URL like `https://nexus-backend.onrender.com`
+
+**Step 4 — Vercel: update the API URL**
+
+In your Vercel project settings → Environment Variables:
+```
+VITE_API_BASE = https://nexus-backend.onrender.com
+```
+Redeploy the frontend for the change to take effect.
+
+> **Note:** The free Render tier spins down after 15 minutes of inactivity (cold start ~30s on first request). Upgrade to the Starter plan ($7/month) to avoid this.
+
+> **Note:** Ollama (local LLM) is not available on Render. Set `OLLAMA_BASE_URL` to a remote Ollama instance or use Claude API (BYOK) instead.
+
+---
+
 ## Architecture Overview
 
 ```

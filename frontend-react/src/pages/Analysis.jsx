@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import ApiKeyGate from '../components/ApiKeyGate'
 import ConvictionGauge from '../components/ConvictionGauge'
 import StockChart from '../components/StockChart'
-import { runAltairAnalysis, searchTicker, fetchStockData, fetchHistory } from '../lib/api'
+import { runAltairAnalysis, searchTicker, fetchStockData, fetchHistory, WS_BASE } from '../lib/api'
 import {
   Brain, Search, Loader2, AlertCircle, ChevronRight, RefreshCw,
   Printer, TrendingUp, TrendingDown, BarChart2, Shield,
@@ -259,42 +259,16 @@ export default function Analysis() {
   const [ticker, setTicker] = useState(searchParams.get('ticker') || '')
   const [forceRefresh, setForceRefresh] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [progress, setProgress] = useState(0)
   const [progressStep, setProgressStep] = useState('')
+  const [progressLog, setProgressLog] = useState([])   // real WS messages
   const [error, setError] = useState('')
   const [report, setReport] = useState(null)
-  const [stockData, setStockData] = useState(null)
   const [history, setHistory] = useState([])
-  const progressRef = useRef(null)
+  const wsRef = useRef(null)
 
-  const PROGRESS_STEPS = [
-    'Typ-Erkennung…',
-    'Methodik-Recherche…',
-    'Finanzdaten abrufen…',
-    'DCF-Berechnung…',
-    'Pre-Mortem Analyse…',
-    'Report erstellen…',
-  ]
-
-  const startProgress = useCallback(() => {
-    setProgress(0)
-    let p = 0
-    let step = 0
-    progressRef.current = setInterval(() => {
-      p = Math.min(p + Math.random() * 2.5, 92)
-      setProgress(Math.round(p))
-      const newStep = Math.min(Math.floor(p / 17), PROGRESS_STEPS.length - 1)
-      if (newStep !== step) {
-        step = newStep
-        setProgressStep(PROGRESS_STEPS[step])
-      }
-    }, 500)
-  }, [])
-
-  const stopProgress = useCallback(() => {
-    if (progressRef.current) clearInterval(progressRef.current)
-    setProgress(100)
-    setProgressStep('Fertig!')
+  // Clean up WebSocket on unmount
+  useEffect(() => {
+    return () => { wsRef.current?.close() }
   }, [])
 
   // Auto-load if ticker in URL
@@ -304,44 +278,81 @@ export default function Analysis() {
       setTicker(urlTicker)
       handleAnalyse(urlTicker)
     }
-  }, [hasApiKey])
+  }, [hasApiKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAnalyse = async (t = ticker) => {
     const sym = (t || ticker).trim().toUpperCase()
     if (!sym) return
+
+    // Close any previous WebSocket
+    wsRef.current?.close()
+
     setError('')
     setReport(null)
-    setStockData(null)
     setLoading(true)
-    setProgressStep(PROGRESS_STEPS[0])
-    startProgress()
+    setProgressLog([])
+    setProgressStep('Verbinde mit Analyse-Engine…')
 
-    // Update URL
     navigate(`/analyse?ticker=${sym}`, { replace: true })
 
+    // Generate a session ID for this analysis run
+    const sessionId = crypto.randomUUID()
+
+    // Open WebSocket and wait for connection
+    const ws = new WebSocket(`${WS_BASE}/ws/${sessionId}`)
+    wsRef.current = ws
+
+    ws.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data)
+        if (data.type === 'progress' && data.message) {
+          setProgressStep(data.message)
+          setProgressLog(prev => [...prev, data.message])
+        } else if (data.type === 'complete') {
+          setProgressStep('Analyse fertig!')
+          ws.close()
+        } else if (data.type === 'error' && data.message) {
+          setError(data.message)
+          ws.close()
+        }
+      } catch { /* ignore non-JSON pings */ }
+    }
+
+    // Wait for WebSocket to open (max 3s) before sending HTTP request
+    await new Promise((resolve) => {
+      if (ws.readyState === WebSocket.OPEN) { resolve(); return }
+      ws.onopen = resolve
+      ws.onerror = resolve  // proceed even if WS fails (analysis still works via HTTP)
+      setTimeout(resolve, 3000)
+    })
+
     try {
-      // Fetch stock data in parallel
       const [res, hist] = await Promise.allSettled([
-        runAltairAnalysis(sym, forceRefresh),
+        runAltairAnalysis(sym, forceRefresh, sessionId),
         fetchHistory(sym, '1y').catch(() => null),
       ])
 
-      stopProgress()
       if (res.status === 'fulfilled') {
         setReport(res.value)
+        setProgressStep('Fertig!')
       } else {
         setError(res.reason?.message || 'Analyse fehlgeschlagen.')
       }
+
       if (hist.status === 'fulfilled' && hist.value) {
         const h = hist.value
-        setHistory((h.dates || []).map((d, i) => ({ date: d, value: h.close?.[i] || h.values?.[i] || 0 })))
+        setHistory(
+          (h.dates || []).map((d, i) => ({
+            date: d,
+            value: h.closes?.[i] || h.close?.[i] || h.values?.[i] || 0,
+          }))
+        )
       }
     } catch (err) {
-      stopProgress()
       setError(err.message || 'Analyse fehlgeschlagen. Bitte versuche es erneut.')
     } finally {
       setLoading(false)
-      setTimeout(() => setProgress(0), 1500)
+      ws.close()
     }
   }
 
@@ -406,21 +417,28 @@ export default function Analysis() {
               </button>
             </div>
 
-            {/* Progress */}
+            {/* Progress — real WebSocket steps */}
             {loading && (
-              <div className="mt-3 space-y-1.5">
-                <div className="flex items-center justify-between text-xs text-slate-500">
-                  <span className="flex items-center gap-1.5">
-                    <Loader2 size={11} className="animate-spin" />
-                    {progressStep}
-                  </span>
-                  <span className="font-mono">{progress}%</span>
+              <div className="mt-3 space-y-2">
+                {/* Current step indicator */}
+                <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                  <Loader2 size={11} className="animate-spin shrink-0" />
+                  <span>{progressStep}</span>
                 </div>
-                <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-primary rounded-full transition-all duration-300"
-                    style={{ width: `${progress}%` }}
-                  />
+                {/* Completed steps log */}
+                {progressLog.length > 0 && (
+                  <div className="bg-slate-50 border border-border rounded-lg p-3 space-y-1 max-h-40 overflow-y-auto">
+                    {progressLog.map((msg, i) => (
+                      <div key={i} className="flex items-start gap-1.5 text-xs text-slate-600">
+                        <CheckCircle size={11} className="text-green-500 mt-0.5 shrink-0" />
+                        <span>{msg}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {/* Indeterminate bar */}
+                <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-primary rounded-full animate-pulse w-3/4" />
                 </div>
               </div>
             )}
