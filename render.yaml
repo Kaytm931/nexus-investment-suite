@@ -16,7 +16,7 @@ services:
         sync: false
       - key: TAVILY_API_KEY
         sync: false
-      - key: OLLAMA_BASE_URL
-        value: http://localhost:11434
+      - key: GROQ_API_KEY
+        sync: false
       - key: PYTHON_VERSION
         value: "3.11"

@@ -3,6 +3,7 @@ NEXUS Investment Suite — FastAPI Backend
 Uses Ollama (local LLM) + Tavily (web search) instead of Playwright/Perplexity.
 """
 
+import os
 import sys
 import json
 import uuid
@@ -42,6 +43,7 @@ from models import (
 )
 from search_service import SearchService
 from ollama_service import OllamaService
+from groq_service import GroqService
 from yfinance_service import YFinanceService
 from sandbox import run_python
 
@@ -420,10 +422,16 @@ async def lifespan(app: FastAPI):
     yf_service = YFinanceService()
     print("[NEXUS] yFinance service initialized (no API key needed).")
 
-    ollama_service = OllamaService(
-        model=cfg.get("ollama_model", "qwen2.5:14b"),
-        num_ctx=cfg.get("ollama_num_ctx", 32768),
-    )
+    groq_key = os.environ.get("GROQ_API_KEY", "").strip()
+    if groq_key:
+        ollama_service = GroqService(api_key=groq_key)
+        print("[NEXUS] AI provider: Groq (llama-3.3-70b-versatile)")
+    else:
+        ollama_service = OllamaService(
+            model=cfg.get("ollama_model", "qwen2.5:14b"),
+            num_ctx=cfg.get("ollama_num_ctx", 32768),
+        )
+        print("[NEXUS] AI provider: Ollama (local)")
     await ollama_service.init()
 
     yield
