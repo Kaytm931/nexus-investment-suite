@@ -519,11 +519,14 @@ async def health_check():
     cfg = load_config()
     tavily_ok = bool(cfg.get("tavily_api_key") and cfg["tavily_api_key"] != "YOUR_TAVILY_API_KEY_HERE")
     ollama_ok = await ollama_service.is_available() if ollama_service else False
+    groq_active = bool(os.environ.get("GROQ_API_KEY", "").strip())
+    active_model = "llama-3.3-70b-versatile (Groq)" if groq_active else cfg.get("ollama_model", "qwen2.5:14b")
     return {
         "status": "ok",
         "tavily_configured": tavily_ok,
         "ollama_running": ollama_ok,
-        "model": cfg.get("ollama_model", "qwen2.5:14b"),
+        "model": active_model,
+        "provider": "groq" if groq_active else "ollama",
     }
 
 # ── Config endpoint ────────────────────────────────────────────────────────────
