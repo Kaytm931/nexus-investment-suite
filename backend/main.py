@@ -58,13 +58,20 @@ CONFIG_PATH = PROJECT_ROOT / "config.json"
 
 def load_config() -> dict:
     if CONFIG_PATH.exists():
-        return json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
-    return {
-        "ollama_model": "qwen2.5:14b",
-        "ollama_num_ctx": 32768,
-        "tavily_api_key": "",
-        "port": 7842,
-    }
+        cfg = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+    else:
+        cfg = {
+            "ollama_model": "qwen2.5:14b",
+            "ollama_num_ctx": 32768,
+            "tavily_api_key": "",
+            "port": 7842,
+        }
+    # Env vars override config.json — needed for Render deployment
+    if os.environ.get("TAVILY_API_KEY"):
+        cfg["tavily_api_key"] = os.environ["TAVILY_API_KEY"]
+    if os.environ.get("OLLAMA_MODEL"):
+        cfg["ollama_model"] = os.environ["OLLAMA_MODEL"]
+    return cfg
 
 # ── System Prompts ─────────────────────────────────────────────────────────────
 
