@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { checkHealth } from '../lib/api'
 import {
   TrendingUp, Search, BarChart2, Briefcase, Settings,
-  LogOut, User, ChevronDown, Menu, X
+  LogOut, User, ChevronDown, Menu, X, Zap
 } from 'lucide-react'
 
 const navLinks = [
@@ -20,7 +20,14 @@ export default function Header() {
   const [backendOnline, setBackendOnline] = useState(null)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
   const userMenuRef = useRef(null)
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
   useEffect(() => {
     const check = async () => {
@@ -61,18 +68,22 @@ export default function Header() {
     : 'bg-danger'
 
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-border shadow-sm no-print">
+    <header className={`sticky top-0 z-50 border-b transition-all duration-200 no-print ${
+      scrolled
+        ? 'bg-white/90 backdrop-blur-md border-border shadow-card'
+        : 'bg-white/95 backdrop-blur-sm border-border/60'
+    }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-14">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2.5 shrink-0">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <TrendingUp className="w-4.5 h-4.5 text-white" size={18} />
+          <Link to="/" className="flex items-center gap-2.5 shrink-0 group">
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
+              <Zap size={16} className="text-white" />
             </div>
-            <div className="flex items-baseline gap-1.5">
+            <div className="flex items-center gap-2">
               <span className="text-lg font-bold text-primary tracking-tight">NEXUS</span>
               <div
-                className={`w-2 h-2 rounded-full ${statusDot} transition-colors`}
+                className={`w-1.5 h-1.5 rounded-full ${statusDot} transition-colors`}
                 title={backendOnline === null ? 'Verbinde…' : backendOnline ? 'Backend online' : 'Backend offline'}
               />
             </div>
