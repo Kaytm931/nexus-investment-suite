@@ -5,6 +5,7 @@ import ApiKeyGate from '../components/ApiKeyGate'
 import ConvictionGauge from '../components/ConvictionGauge'
 import StockChart from '../components/StockChart'
 import { runAltairAnalysis, searchTicker, fetchStockData, fetchHistory, WS_BASE } from '../lib/api'
+import { gsap } from 'gsap'
 import {
   Brain, Search, Loader2, AlertCircle, ChevronRight, RefreshCw,
   Printer, TrendingUp, TrendingDown, BarChart2, Shield,
@@ -266,6 +267,47 @@ export default function Analysis() {
   const [history, setHistory] = useState([])
   const wsRef = useRef(null)
 
+  // Animation refs
+  const reportRef = useRef(null)
+  const progressLogRef = useRef(null)
+  const prevLogLengthRef = useRef(0)
+
+  // Stagger-animate report cards when report arrives
+  useEffect(() => {
+    if (!report || !reportRef.current) return
+    const ctx = gsap.context(() => {
+      gsap.from(reportRef.current.querySelectorAll('.card'), {
+        opacity: 0,
+        y: 36,
+        duration: 0.55,
+        stagger: 0.09,
+        ease: 'power2.out',
+        clearProps: 'all',
+      })
+    }, reportRef)
+    return () => ctx.revert()
+  }, [report])
+
+  // Slide-in each new progress log entry as it arrives
+  useEffect(() => {
+    if (!progressLogRef.current || progressLog.length === 0) return
+    if (progressLog.length <= prevLogLengthRef.current) {
+      prevLogLengthRef.current = progressLog.length
+      return
+    }
+    const items = progressLogRef.current.querySelectorAll('.progress-step')
+    const lastItem = items[items.length - 1]
+    if (lastItem) {
+      gsap.from(lastItem, {
+        opacity: 0,
+        x: -14,
+        duration: 0.35,
+        ease: 'power2.out',
+      })
+    }
+    prevLogLengthRef.current = progressLog.length
+  }, [progressLog])
+
   // Clean up WebSocket on unmount
   useEffect(() => {
     return () => { wsRef.current?.close() }
@@ -417,28 +459,42 @@ export default function Analysis() {
               </button>
             </div>
 
-            {/* Progress — real WebSocket steps */}
+            {/* Progress — animated WebSocket steps */}
             {loading && (
-              <div className="mt-3 space-y-2">
-                {/* Current step indicator */}
-                <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                  <Loader2 size={11} className="animate-spin shrink-0" />
-                  <span>{progressStep}</span>
+              <div className="mt-4 space-y-3">
+                {/* Active step — pulsing indicator */}
+                <div className="flex items-center gap-2 text-xs text-slate-600">
+                  <span className="relative flex h-2 w-2 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-60" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+                  </span>
+                  <span className="font-medium">{progressStep}</span>
                 </div>
+
                 {/* Completed steps log */}
                 {progressLog.length > 0 && (
-                  <div className="bg-slate-50 border border-border rounded-lg p-3 space-y-1 max-h-40 overflow-y-auto">
+                  <div
+                    ref={progressLogRef}
+                    className="bg-slate-50 border border-border rounded-lg p-3 space-y-1.5 max-h-44 overflow-y-auto"
+                  >
                     {progressLog.map((msg, i) => (
-                      <div key={i} className="flex items-start gap-1.5 text-xs text-slate-600">
-                        <CheckCircle size={11} className="text-green-500 mt-0.5 shrink-0" />
+                      <div key={i} className="progress-step flex items-start gap-2 text-xs text-slate-500">
+                        <CheckCircle size={11} className="text-emerald-500 mt-0.5 shrink-0" />
                         <span>{msg}</span>
                       </div>
                     ))}
                   </div>
                 )}
-                {/* Indeterminate bar */}
-                <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-primary rounded-full animate-pulse w-3/4" />
+
+                {/* Indeterminate progress bar */}
+                <div className="h-0.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary rounded-full"
+                    style={{
+                      width: progressLog.length > 0 ? `${Math.min(90, (progressLog.length / 8) * 100)}%` : '15%',
+                      transition: 'width 0.6s ease',
+                    }}
+                  />
                 </div>
               </div>
             )}
@@ -468,7 +524,7 @@ export default function Analysis() {
 
           {/* Report */}
           {report && sections && (
-            <div className="space-y-4">
+            <div ref={reportRef} className="space-y-4">
               {/* Price chart + Conviction */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Price chart */}

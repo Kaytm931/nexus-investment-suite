@@ -1,4 +1,5 @@
-import React from 'react'
+import React, { useRef, useEffect, useState } from 'react'
+import { gsap } from 'gsap'
 
 const SCORE_LABELS = {
   0: 'Nicht kaufen',
@@ -34,7 +35,8 @@ const POSITION_SIZES = {
 }
 
 /**
- * ConvictionGauge — SVG arc gauge for Altair conviction score (0-7)
+ * ConvictionGauge — SVG arc gauge with GSAP entrance animation
+ * Arc fills from left to right; score counts up from 0.
  */
 export default function ConvictionGauge({ score = 0, size = 160 }) {
   const clampedScore = Math.max(0, Math.min(7, Math.round(score)))
@@ -42,15 +44,19 @@ export default function ConvictionGauge({ score = 0, size = 160 }) {
   const label = SCORE_LABELS[clampedScore]
   const posSize = POSITION_SIZES[clampedScore]
 
+  const arcRef = useRef(null)
+  const [displayScore, setDisplayScore] = useState(0)
+
   // Arc geometry
   const r = 45
   const cx = size / 2
   const cy = size / 2 + 10
   const startAngle = -210
   const endAngle = 30
-  const totalArc = endAngle - startAngle // 240 degrees
+  const totalArc = 240 // degrees
 
   const toRad = (deg) => (deg * Math.PI) / 180
+
   const arcPoint = (angle) => ({
     x: cx + r * Math.cos(toRad(angle)),
     y: cy + r * Math.sin(toRad(angle)),
@@ -63,7 +69,43 @@ export default function ConvictionGauge({ score = 0, size = 160 }) {
     return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 1 ${end.x} ${end.y}`
   }
 
-  const fillAngle = startAngle + (totalArc * clampedScore) / 7
+  // Arc lengths for strokeDasharray animation
+  const totalLength = r * toRad(totalArc)          // ≈ 188.5
+  const fillLength = (clampedScore / 7) * totalLength
+
+  useEffect(() => {
+    setDisplayScore(0)
+
+    const ctx = gsap.context(() => {
+      // Animate the arc strokeDashoffset: starts hidden, fills to target
+      if (arcRef.current && clampedScore > 0) {
+        gsap.fromTo(
+          arcRef.current,
+          { strokeDashoffset: totalLength },
+          {
+            strokeDashoffset: totalLength - fillLength,
+            duration: 1.2,
+            ease: 'power3.out',
+            delay: 0.2,
+          }
+        )
+      }
+
+      // Count-up animation for the score number
+      const counter = { val: 0 }
+      gsap.to(counter, {
+        val: clampedScore,
+        duration: 1.2,
+        ease: 'power3.out',
+        delay: 0.2,
+        onUpdate() {
+          setDisplayScore(Math.round(counter.val))
+        },
+      })
+    })
+
+    return () => ctx.revert()
+  }, [clampedScore]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="flex flex-col items-center gap-2">
@@ -76,14 +118,17 @@ export default function ConvictionGauge({ score = 0, size = 160 }) {
           strokeWidth={10}
           strokeLinecap="round"
         />
-        {/* Fill arc */}
+        {/* Animated fill arc — uses full-arc path + dashoffset reveal */}
         {clampedScore > 0 && (
           <path
-            d={makeArc(startAngle, fillAngle)}
+            ref={arcRef}
+            d={makeArc(startAngle, endAngle)}
             fill="none"
             stroke={color}
             strokeWidth={10}
             strokeLinecap="round"
+            strokeDasharray={totalLength}
+            strokeDashoffset={totalLength}
           />
         )}
         {/* Score number */}
@@ -97,7 +142,7 @@ export default function ConvictionGauge({ score = 0, size = 160 }) {
           fontFamily="JetBrains Mono, monospace"
           fill={color}
         >
-          {clampedScore}
+          {displayScore}
         </text>
         <text
           x={cx}
@@ -111,7 +156,6 @@ export default function ConvictionGauge({ score = 0, size = 160 }) {
         >
           VON 7
         </text>
-
         {/* Min / Max labels */}
         <text x={cx - r - 4} y={cy + 22} textAnchor="middle" fontSize="9" fill="#94a3b8" fontFamily="Inter, sans-serif">0</text>
         <text x={cx + r + 4} y={cy + 22} textAnchor="middle" fontSize="9" fill="#94a3b8" fontFamily="Inter, sans-serif">7</text>
