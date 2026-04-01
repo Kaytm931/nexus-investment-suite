@@ -4,221 +4,504 @@ import { useAuth } from '../context/AuthContext'
 import { fetchMarketMovers } from '../lib/api'
 import StockChart from '../components/StockChart'
 import { gsap } from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import {
-  TrendingUp, TrendingDown, BarChart2, Search,
-  ChevronRight, Zap, Brain, ArrowUpRight, ArrowDownRight, Loader2,
-  Cpu, Activity
+  TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight,
+  WifiOff, RefreshCw, ChevronRight, Search, Brain
 } from 'lucide-react'
 
-// ─── Demo data ────────────────────────────────────────────────────────────────
-function makeSpark(base, days = 30, trend = 0) {
-  return Array.from({ length: days }, (_, i) => ({
-    date: `T-${days - i}`,
-    value: base + trend * i + (Math.random() - 0.5) * base * 0.015,
-  }))
+gsap.registerPlugin(ScrollTrigger)
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function deriveExchange(symbol) {
+  if (!symbol) return ''
+  const s = symbol.toUpperCase()
+  if (s.endsWith('.DE') || s === 'DAX' || s === '^GDAXI') return 'XETRA'
+  if (s.endsWith('.L') || s === 'MSCIW' || s === 'IWDA.L') return 'LSE'
+  if (s === 'SPX' || s === '^GSPC' || s === 'S&P500') return 'NYSE'
+  if (s.endsWith('.SW')) return 'SIX'
+  if (s.endsWith('.PA')) return 'Euronext'
+  return 'NASDAQ'
 }
 
-const DEMO_INDICES = [
-  { symbol: 'DAX', name: 'DAX', price: 18432.50, change: 0.82, spark: makeSpark(17800, 30, 20) },
-  { symbol: 'SPX', name: 'S&P 500', price: 5123.41, change: 0.34, spark: makeSpark(4950, 30, 5) },
-  { symbol: 'MSCIW', name: 'MSCI World', price: 3541.80, change: 0.51, spark: makeSpark(3400, 30, 4) },
-]
+function fmtDateTime(date) {
+  if (!date) return '—'
+  return date.toLocaleString('de-DE', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  })
+}
 
-const DEMO_GAINERS = [
-  { ticker: 'NVDA', name: 'NVIDIA Corp.', price: 875.40, change: 6.82, sector: 'Technology' },
-  { ticker: 'META', name: 'Meta Platforms', price: 524.10, change: 4.23, sector: 'Technology' },
-  { ticker: 'AMD', name: 'Advanced Micro Devices', price: 182.50, change: 3.91, sector: 'Technology' },
-]
-
-const DEMO_LOSERS = [
-  { ticker: 'INTC', name: 'Intel Corp.', price: 28.40, change: -4.12, sector: 'Technology' },
-  { ticker: 'PFE', name: 'Pfizer Inc.', price: 25.80, change: -2.87, sector: 'Healthcare' },
-  { ticker: 'PARA', name: 'Paramount Global', price: 11.20, change: -2.34, sector: 'Consumer' },
-]
-
-// ─── Components ────────────────────────────────────────────────────────────────
-function IndexCard({ index }) {
+// ─── Index Card ────────────────────────────────────────────────────────────────
+function IndexCard({ index, fetchedAt }) {
   const positive = index.change >= 0
+  const exchange = deriveExchange(index.symbol)
+
   return (
-    <div className="index-card card p-5 hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-200">
-      <div className="flex items-start justify-between mb-3">
+    <div
+      className="index-card rounded-2xl p-5 transition-all duration-300 group cursor-default"
+      style={{
+        background: 'var(--surface-2)',
+        border: '1px solid var(--border)',
+      }}
+    >
+      <div className="flex items-start justify-between mb-4">
         <div>
-          <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">{index.name}</p>
-          <p className="text-2xl font-mono font-bold text-slate-900 mt-0.5 tabular-nums">
-            {index.price.toLocaleString('de-DE', { minimumFractionDigits: 2 })}
+          <div className="flex items-center gap-2 mb-1">
+            <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+              {index.name}
+            </p>
+            {exchange && (
+              <span
+                className="text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded"
+                style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)', letterSpacing: '0.08em' }}
+              >
+                {exchange}
+              </span>
+            )}
+          </div>
+          <p
+            className="text-3xl font-bold tabular"
+            style={{ fontFamily: "'Satoshi', sans-serif", color: 'var(--text)' }}
+          >
+            {index.price != null
+              ? index.price.toLocaleString('de-DE', { minimumFractionDigits: 2 })
+              : '—'}
           </p>
         </div>
-        <span className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-mono font-semibold ${
-          positive ? 'bg-success-light text-success' : 'bg-danger-light text-danger'
-        }`}>
+        <span
+          className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-mono font-semibold shrink-0 mt-1"
+          style={{
+            background: positive ? 'rgba(124,255,203,0.12)' : 'rgba(255,77,109,0.12)',
+            color: positive ? 'var(--success)' : 'var(--danger)',
+            border: `1px solid ${positive ? 'rgba(124,255,203,0.25)' : 'rgba(255,77,109,0.25)'}`,
+          }}
+        >
           {positive ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
-          {positive ? '+' : ''}{index.change.toFixed(2)}%
+          {positive ? '+' : ''}{index.change?.toFixed(2) ?? '—'}%
         </span>
       </div>
-      <StockChart data={index.spark} color={positive ? '#16a34a' : '#dc2626'} height={70} minimal showArea />
+
+      {index.spark?.length > 0 ? (
+        <StockChart data={index.spark} color={positive ? '#7cffcb' : '#ff4d6d'} height={52} minimal showArea />
+      ) : (
+        <div className="h-12 flex items-center justify-center">
+          <span className="text-xs" style={{ color: 'rgba(107,117,153,0.5)' }}>Keine Verlaufsdaten</span>
+        </div>
+      )}
+
+      {fetchedAt && (
+        <p className="text-[10px] font-mono mt-3" style={{ color: 'rgba(107,117,153,0.6)' }}>
+          Stand: {fmtDateTime(fetchedAt)}
+        </p>
+      )}
     </div>
   )
 }
 
+// ─── Mover Row ─────────────────────────────────────────────────────────────────
 function MoverRow({ item, isGainer }) {
+  const exchange = deriveExchange(item.ticker)
+  const short = item.ticker.replace(/\.[A-Z]+$/, '').slice(0, 3)
   return (
     <Link
       to={`/analyse?ticker=${item.ticker}`}
-      className="mover-row flex items-center justify-between py-2.5 hover:bg-surface px-3 rounded-xl -mx-3 transition-all duration-150 group hover:-translate-y-px"
+      className="screener-row flex items-center justify-between py-3 px-3 rounded-xl -mx-3 transition-all duration-200 group"
+      style={{ color: 'inherit' }}
+      onMouseEnter={e => e.currentTarget.style.background = 'rgba(79,142,247,0.05)'}
+      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
     >
       <div className="flex items-center gap-3">
-        <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold font-mono ${
-          isGainer ? 'bg-success-light text-success' : 'bg-danger-light text-danger'
-        }`}>
-          {item.ticker.slice(0, 2)}
+        <div
+          className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold font-mono shrink-0"
+          style={{
+            background: isGainer ? 'rgba(124,255,203,0.1)' : 'rgba(255,77,109,0.1)',
+            color: isGainer ? 'var(--success)' : 'var(--danger)',
+            border: `1px solid ${isGainer ? 'rgba(124,255,203,0.2)' : 'rgba(255,77,109,0.2)'}`,
+          }}
+        >
+          {short}
         </div>
         <div>
-          <p className="text-sm font-semibold text-slate-800 group-hover:text-primary transition-colors">{item.ticker}</p>
-          <p className="text-xs text-slate-500 max-w-[150px] truncate">{item.name}</p>
+          <p className="text-sm font-semibold transition-colors" style={{ color: 'var(--text)' }}>
+            {item.ticker}
+          </p>
+          <div className="flex items-center gap-1.5">
+            <p className="text-xs max-w-[120px] truncate" style={{ color: 'var(--text-muted)' }}>{item.name}</p>
+            {exchange && (
+              <span
+                className="text-[9px] font-mono px-1 py-px rounded shrink-0"
+                style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)' }}
+              >
+                {exchange}
+              </span>
+            )}
+          </div>
         </div>
       </div>
-      <div className="text-right">
-        <p className="text-sm font-mono font-medium text-slate-800 tabular-nums">
-          {item.price.toLocaleString('de-DE', { minimumFractionDigits: 2 })}
+      <div className="text-right shrink-0">
+        <p className="text-sm font-mono font-medium tabular" style={{ color: 'var(--text)' }}>
+          {item.price != null
+            ? item.price.toLocaleString('de-DE', { minimumFractionDigits: 2 })
+            : '—'}
         </p>
-        <p className={`text-xs font-mono font-semibold ${isGainer ? 'text-success' : 'text-danger'}`}>
-          {isGainer ? '+' : ''}{item.change.toFixed(2)}%
+        <p
+          className="text-xs font-mono font-semibold"
+          style={{ color: isGainer ? 'var(--success)' : 'var(--danger)' }}
+        >
+          {isGainer ? '+' : ''}{item.change?.toFixed(2) ?? '—'}%
         </p>
       </div>
     </Link>
   )
 }
 
+// ─── Demo Ticker (Elara card animation) ────────────────────────────────────────
+const DEMO_TICKERS = ['MSFT', 'NVDA', 'ASML', 'SAP', 'GOOGL', 'META', 'BRK', 'TSLA', 'AMZN', 'AAPL']
+
+function ElaraDemoTicker() {
+  const [visible, setVisible] = useState([])
+  useEffect(() => {
+    let i = 0
+    const id = setInterval(() => {
+      if (i >= DEMO_TICKERS.length) { clearInterval(id); return }
+      setVisible(v => [...v, { ticker: DEMO_TICKERS[i], score: Math.floor(60 + Math.random() * 38) }])
+      i++
+    }, 300)
+    return () => clearInterval(id)
+  }, [])
+
+  return (
+    <div className="space-y-2 mt-4">
+      {visible.map(({ ticker, score }) => (
+        <div
+          key={ticker}
+          className="flex items-center justify-between px-3 py-2 rounded-xl"
+          style={{
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.05)',
+            animation: 'fadeInUp 0.35s ease forwards',
+          }}
+        >
+          <span className="text-xs font-mono font-semibold" style={{ color: 'var(--text)' }}>{ticker}</span>
+          <div className="flex items-center gap-2">
+            <div
+              className="h-1 rounded-full"
+              style={{
+                width: `${score * 0.6}px`,
+                background: score > 75
+                  ? 'linear-gradient(90deg, var(--primary), var(--accent))'
+                  : 'linear-gradient(90deg, var(--primary), rgba(79,142,247,0.4))',
+                boxShadow: score > 75 ? '0 0 8px rgba(124,255,203,0.4)' : 'none',
+              }}
+            />
+            <span className="text-xs font-mono w-7 text-right" style={{ color: score > 75 ? 'var(--accent)' : 'var(--primary)' }}>
+              {score}
+            </span>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ─── Conviction Ring (Altair card animation) ────────────────────────────────────
+function ConvictionRing() {
+  const [score, setScore] = useState(0)
+  const target = 5
+  const radius = 36
+  const circumference = 2 * Math.PI * radius
+  const pct = score / 7
+  const offset = circumference - pct * circumference
+
+  useEffect(() => {
+    let current = 0
+    const id = setInterval(() => {
+      if (current >= target) { clearInterval(id); return }
+      current += 0.1
+      setScore(Math.min(current, target))
+    }, 40)
+    return () => clearInterval(id)
+  }, [])
+
+  const label = score >= 5 ? 'STRONG BUY' : score >= 3 ? 'BUY' : 'HOLD'
+  const color = score >= 5 ? 'var(--accent)' : score >= 3 ? 'var(--primary)' : '#fbbf24'
+
+  return (
+    <div className="flex items-center gap-6 mt-4">
+      <div className="relative w-24 h-24">
+        <svg width="96" height="96" viewBox="0 0 96 96">
+          <circle cx="48" cy="48" r={radius} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="6" />
+          <circle
+            className="conviction-ring"
+            cx="48" cy="48" r={radius}
+            fill="none"
+            stroke={color}
+            strokeWidth="6"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            style={{
+              filter: `drop-shadow(0 0 8px ${color})`,
+              transition: 'stroke-dashoffset 0.1s linear',
+            }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-2xl font-bold tabular" style={{ color, fontFamily: "'Boska', serif" }}>
+            {score.toFixed(1)}
+          </span>
+          <span className="text-[9px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>/ 7</span>
+        </div>
+      </div>
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color }}>
+          {label}
+        </p>
+        <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)', maxWidth: '160px' }}>
+          Conviction Score basierend auf DCF + Qualität + Katalysatoren
+        </p>
+        <div className="flex gap-2 mt-3">
+          {['Base', 'Bull', 'Bear'].map((s, i) => (
+            <span key={s} className="text-[10px] font-mono px-2 py-0.5 rounded-lg" style={{
+              background: i === 0 ? 'rgba(79,142,247,0.12)' : i === 1 ? 'rgba(124,255,203,0.1)' : 'rgba(255,77,109,0.1)',
+              color: i === 0 ? 'var(--primary)' : i === 1 ? 'var(--accent)' : 'var(--danger)',
+              border: `1px solid ${i === 0 ? 'rgba(79,142,247,0.2)' : i === 1 ? 'rgba(124,255,203,0.2)' : 'rgba(255,77,109,0.2)'}`,
+            }}>
+              DCF {s}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function Home() {
   const { user } = useAuth()
-  const [indices, setIndices] = useState(DEMO_INDICES)
-  const [gainers, setGainers] = useState(DEMO_GAINERS)
-  const [losers, setLosers] = useState(DEMO_LOSERS)
+  const [indices, setIndices] = useState([])
+  const [gainers, setGainers] = useState([])
+  const [losers, setLosers] = useState([])
   const [loading, setLoading] = useState(true)
+  const [backendOffline, setBackendOffline] = useState(false)
+  const [fetchedAt, setFetchedAt] = useState(null)
 
   const heroRef = useRef(null)
   const marketRef = useRef(null)
+  const featuresRef = useRef(null)
+  const ctaRef = useRef(null)
 
-  // Hero entrance animation
+  // Hero entrance
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
       const tl = gsap.timeline({ defaults: { ease: 'power3.out' } })
-      tl.from('.hero-badge', { opacity: 0, y: -16, duration: 0.5 })
-        .from('.hero-line', { opacity: 0, y: 50, duration: 0.7, stagger: 0.12 }, '-=0.2')
-        .from('.hero-sub', { opacity: 0, y: 20, duration: 0.6 }, '-=0.3')
-        .from('.hero-cta', { opacity: 0, y: 20, duration: 0.5, stagger: 0.1 }, '-=0.3')
-        .from('.hero-stat', { opacity: 0, scale: 0.9, duration: 0.4, stagger: 0.08 }, '-=0.2')
+      tl.from('.hero-badge', { opacity: 0, y: -20, duration: 0.5 })
+        .from('.hero-line', { opacity: 0, y: 60, duration: 0.8, stagger: 0.12 }, '-=0.2')
+        .from('.hero-sub',  { opacity: 0, y: 24, duration: 0.6 }, '-=0.35')
+        .from('.hero-cta',  { opacity: 0, y: 20, duration: 0.5, stagger: 0.1 }, '-=0.3')
+        .from('.hero-stat', { opacity: 0, scale: 0.85, duration: 0.5, stagger: 0.08, ease: 'back.out(1.4)' }, '-=0.25')
     }, heroRef)
     return () => ctx.revert()
   }, [])
 
-  // Market data stagger after load
+  // Market cards stagger
   useEffect(() => {
     if (loading) return
     const ctx = gsap.context(() => {
       gsap.from('.index-card', {
-        opacity: 0, y: 28, duration: 0.5, stagger: 0.08, ease: 'power2.out'
+        opacity: 0, y: 32, duration: 0.55, stagger: 0.1, ease: 'power2.out',
       })
     }, marketRef)
     return () => ctx.revert()
   }, [loading])
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const data = await fetchMarketMovers()
-        if (data?.indices?.length) setIndices(data.indices)
-        if (data?.gainers?.length) setGainers(data.gainers)
-        if (data?.losers?.length) setLosers(data.losers)
-      } catch { /* use demo data */ } finally {
-        setLoading(false)
-      }
-    }
-    load()
+  // ScrollTrigger: feature cards
+  useLayoutEffect(() => {
+    const cards = document.querySelectorAll('.feature-card')
+    cards.forEach((card, i) => {
+      gsap.from(card, {
+        scrollTrigger: { trigger: card, start: 'top 85%', once: true },
+        opacity: 0,
+        x: i % 2 === 0 ? -40 : 40,
+        duration: 0.7,
+        ease: 'power2.out',
+      })
+    })
+    // CTA
+    gsap.from('.cta-section', {
+      scrollTrigger: { trigger: '.cta-section', start: 'top 90%', once: true },
+      opacity: 0,
+      y: 40,
+      duration: 0.7,
+      ease: 'power2.out',
+    })
+    return () => ScrollTrigger.getAll().forEach(t => t.kill())
   }, [])
 
+  const loadData = async () => {
+    setLoading(true)
+    setBackendOffline(false)
+    try {
+      const data = await fetchMarketMovers()
+      if (data?.indices?.length) setIndices(data.indices)
+      if (data?.gainers?.length) setGainers(data.gainers)
+      if (data?.losers?.length) setLosers(data.losers)
+      setFetchedAt(new Date())
+    } catch {
+      setBackendOffline(true)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { loadData() }, [])
+
   return (
-    <div>
-      {/* ── Dark Hero ─────────────────────────────────────────────────────── */}
+    <div style={{ background: 'var(--bg)' }}>
+      {/* ── HERO ─────────────────────────────────────────────────────────── */}
       <section
         ref={heroRef}
-        className="relative overflow-hidden bg-primary-900 text-white"
-        style={{
-          background: 'linear-gradient(135deg, #0f2238 0%, #1a3a5c 55%, #152e49 100%)',
-        }}
+        className="relative overflow-hidden min-h-[92vh] flex items-center"
+        style={{ background: 'var(--bg)' }}
       >
-        {/* Subtle grid overlay */}
+        {/* Dot grid */}
         <div
-          className="absolute inset-0 opacity-[0.04]"
+          className="absolute inset-0 pointer-events-none"
           style={{
-            backgroundImage: 'linear-gradient(rgba(255,255,255,0.8) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.8) 1px, transparent 1px)',
-            backgroundSize: '48px 48px',
+            backgroundImage: 'radial-gradient(rgba(255,255,255,0.09) 1px, transparent 1px)',
+            backgroundSize: '32px 32px',
+            mask: 'radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 100%)',
+            WebkitMask: 'radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 100%)',
           }}
         />
 
-        {/* Glow blob */}
+        {/* Glow blobs */}
         <div
-          className="absolute top-0 right-1/4 w-96 h-96 rounded-full opacity-10 blur-3xl pointer-events-none"
-          style={{ background: 'radial-gradient(circle, #5a91c5 0%, transparent 70%)' }}
+          className="absolute pointer-events-none"
+          style={{
+            top: '-10%', right: '5%',
+            width: '600px', height: '600px',
+            background: 'radial-gradient(circle, rgba(79,142,247,0.12) 0%, transparent 70%)',
+            filter: 'blur(40px)',
+          }}
+        />
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            bottom: '5%', left: '-5%',
+            width: '400px', height: '400px',
+            background: 'radial-gradient(circle, rgba(124,255,203,0.07) 0%, transparent 70%)',
+            filter: 'blur(40px)',
+          }}
         />
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28">
-          {/* Badge */}
-          <div className="hero-badge inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/15 bg-white/8 backdrop-blur-sm text-xs font-medium text-white/80 mb-8">
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400" />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32 w-full">
+          {/* KI Badge */}
+          <div
+            className="hero-badge inline-flex items-center gap-2.5 px-4 py-2 rounded-full text-xs font-medium mb-10"
+            style={{
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              color: 'rgba(232,234,240,0.7)',
+              backdropFilter: 'blur(8px)',
+            }}
+          >
+            <span className="relative flex h-2 w-2">
+              <span
+                className="absolute inline-flex h-full w-full rounded-full"
+                style={{ background: 'var(--accent)', animation: 'ping-slow 2s cubic-bezier(0,0,0.2,1) infinite', opacity: 0.7 }}
+              />
+              <span
+                className="relative inline-flex h-2 w-2 rounded-full"
+                style={{ background: 'var(--accent)', boxShadow: '0 0 6px var(--accent)' }}
+              />
             </span>
-            KI-gestützte Investmentanalyse · Powered by Groq
+            KI aktiv — Powered by Groq
           </div>
 
           {/* Headline */}
-          <div className="max-w-3xl mb-6">
-            <h1 className="text-5xl sm:text-6xl font-bold leading-[1.08] tracking-tight">
-              <span className="hero-line block text-white">Institutionelle</span>
-              <span className="hero-line block text-white">Analyse.</span>
-              <span className="hero-line block" style={{ color: '#8bb6db' }}>Für jeden.</span>
+          <div className="max-w-4xl mb-8">
+            <h1
+              className="leading-none tracking-tight"
+              style={{
+                fontFamily: "'Boska', Georgia, serif",
+                fontWeight: 900,
+                fontSize: 'clamp(3rem, 8vw, 7rem)',
+              }}
+            >
+              <span className="hero-line block" style={{ color: 'var(--text)' }}>Institutionelle</span>
+              <span className="hero-line block" style={{ color: 'var(--text)' }}>Investment-Analyse.</span>
+              <span className="hero-line block" style={{ color: 'var(--primary)', textShadow: '0 0 80px rgba(79,142,247,0.4)' }}>Für jeden.</span>
             </h1>
           </div>
 
-          <p className="hero-sub text-base sm:text-lg text-white/60 max-w-xl mb-10 leading-relaxed">
-            <strong className="text-white/90">Elara</strong> screent Sektoren quantamental,{' '}
-            <strong className="text-white/90">Altair</strong> liefert DCF-Analyse und Conviction Score —
-            professionelles Research in Sekunden.
+          <p
+            className="hero-sub text-base sm:text-lg max-w-xl mb-12 leading-relaxed"
+            style={{ color: 'rgba(232,234,240,0.55)' }}
+          >
+            <strong style={{ color: 'var(--text)', fontWeight: 600 }}>Elara</strong> screent Sektoren quantamental.{' '}
+            <strong style={{ color: 'var(--text)', fontWeight: 600 }}>Altair</strong> liefert DCF-Analyse und Conviction Score.
+            Professionelles Research in Sekunden.
           </p>
 
           {/* CTAs */}
-          <div className="flex flex-wrap gap-3 mb-14">
+          <div className="flex flex-wrap gap-3 mb-20">
             {user ? (
               <>
                 <Link
                   to="/screener"
-                  className="hero-cta inline-flex items-center gap-2 px-6 py-3 bg-white text-primary font-semibold text-sm rounded-xl hover:bg-white/90 transition-all duration-150 hover:-translate-y-px shadow-lg shadow-black/20"
+                  className="hero-cta inline-flex items-center gap-2 px-7 py-3.5 rounded-2xl text-sm font-semibold transition-all duration-200"
+                  style={{
+                    background: 'var(--accent)',
+                    color: '#0a0f1e',
+                    boxShadow: '0 0 32px rgba(124,255,203,0.3)',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 0 48px rgba(124,255,203,0.5)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
+                  onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 0 32px rgba(124,255,203,0.3)'; e.currentTarget.style.transform = 'none' }}
                 >
-                  <Search size={15} />
-                  Screener starten
+                  <Search size={15} /> Screener starten
                 </Link>
                 <Link
                   to="/analyse"
-                  className="hero-cta inline-flex items-center gap-2 px-6 py-3 bg-white/10 text-white font-semibold text-sm rounded-xl border border-white/20 hover:bg-white/15 transition-all duration-150 hover:-translate-y-px backdrop-blur-sm"
+                  className="hero-cta inline-flex items-center gap-2 px-7 py-3.5 rounded-2xl text-sm font-semibold transition-all duration-200"
+                  style={{
+                    background: 'rgba(255,255,255,0.05)',
+                    color: 'var(--text)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    backdropFilter: 'blur(8px)',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.09)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.transform = 'none' }}
                 >
-                  <Brain size={15} />
-                  Aktie analysieren
+                  <Brain size={15} /> Aktie analysieren
                 </Link>
               </>
             ) : (
               <>
                 <Link
                   to="/auth"
-                  className="hero-cta inline-flex items-center gap-2 px-6 py-3 bg-white text-primary font-semibold text-sm rounded-xl hover:bg-white/90 transition-all duration-150 hover:-translate-y-px shadow-lg shadow-black/20"
+                  className="hero-cta inline-flex items-center gap-2 px-7 py-3.5 rounded-2xl text-sm font-semibold transition-all duration-200"
+                  style={{
+                    background: 'var(--accent)',
+                    color: '#0a0f1e',
+                    boxShadow: '0 0 32px rgba(124,255,203,0.3)',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 0 48px rgba(124,255,203,0.5)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
+                  onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 0 32px rgba(124,255,203,0.3)'; e.currentTarget.style.transform = 'none' }}
                 >
-                  Kostenlos registrieren
-                  <ChevronRight size={15} />
+                  Kostenlos starten <ChevronRight size={15} />
                 </Link>
                 <Link
                   to="/screener"
-                  className="hero-cta inline-flex items-center gap-2 px-6 py-3 bg-white/10 text-white font-semibold text-sm rounded-xl border border-white/20 hover:bg-white/15 transition-all duration-150 hover:-translate-y-px backdrop-blur-sm"
+                  className="hero-cta inline-flex items-center gap-2 px-7 py-3.5 rounded-2xl text-sm font-semibold transition-all duration-200"
+                  style={{
+                    background: 'rgba(255,255,255,0.05)',
+                    color: 'var(--text)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.09)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.transform = 'none' }}
                 >
                   Demo ansehen
                 </Link>
@@ -226,143 +509,320 @@ export default function Home() {
             )}
           </div>
 
-          {/* Stats row */}
-          <div className="flex flex-wrap gap-6 sm:gap-10">
+          {/* Stats */}
+          <div className="flex flex-wrap gap-8 sm:gap-14">
             {[
-              { value: '14', label: 'Sektoren' },
+              { value: '14',  label: 'Sektoren' },
               { value: '0–7', label: 'Conviction Score' },
               { value: 'DCF', label: 'Bewertungsmodell' },
               { value: 'Live', label: 'KI-Analyse' },
             ].map(({ value, label }) => (
               <div key={label} className="hero-stat">
-                <p className="text-2xl font-bold font-mono text-white tabular-nums">{value}</p>
-                <p className="text-xs text-white/50 mt-0.5 uppercase tracking-wider">{label}</p>
+                <p
+                  className="text-3xl font-bold tabular"
+                  style={{ fontFamily: "'Boska', serif", color: 'var(--text)' }}
+                >
+                  {value}
+                </p>
+                <p
+                  className="text-[10px] uppercase tracking-widest mt-1"
+                  style={{ color: 'var(--text-muted)' }}
+                >
+                  {label}
+                </p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── Market + Content ──────────────────────────────────────────────── */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10" ref={marketRef}>
+      {/* ── MARKET OVERVIEW ──────────────────────────────────────────────── */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12" ref={marketRef}>
 
-        {/* Market Overview */}
         <section>
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-2">
-              <BarChart2 size={15} className="text-primary" />
-              <h2 className="text-base font-semibold text-slate-800">Marktüberblick</h2>
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2
+                className="text-2xl font-bold mb-1"
+                style={{ fontFamily: "'Boska', serif", color: 'var(--text)' }}
+              >
+                Marktüberblick
+              </h2>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                Live-Daten der wichtigsten Indizes
+              </p>
             </div>
-            <span className="text-xs text-slate-400 font-mono">Demo-Daten</span>
+            <div className="flex items-center gap-4">
+              {fetchedAt && !loading && (
+                <span className="text-xs font-mono hidden sm:block" style={{ color: 'var(--text-muted)' }}>
+                  {fmtDateTime(fetchedAt)}
+                </span>
+              )}
+              {!loading && (
+                <button
+                  onClick={loadData}
+                  className="flex items-center gap-1.5 text-xs transition-colors duration-200"
+                  style={{ color: 'var(--text-muted)' }}
+                  onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
+                  onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+                >
+                  <RefreshCw size={12} /> Aktualisieren
+                </button>
+              )}
+            </div>
           </div>
+
           {loading ? (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[1, 2, 3].map(i => (
-                <div key={i} className="card p-5">
-                  <div className="skeleton h-3.5 w-16 mb-2" />
-                  <div className="skeleton h-8 w-28 mb-4" />
-                  <div className="skeleton h-16 w-full" />
+                <div key={i} className="rounded-2xl p-5" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                  <div className="skeleton h-3 w-16 mb-3 rounded" />
+                  <div className="skeleton h-9 w-28 mb-5 rounded" />
+                  <div className="skeleton h-12 w-full rounded" />
                 </div>
               ))}
             </div>
+          ) : backendOffline ? (
+            <div
+              className="rounded-2xl p-10 text-center"
+              style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
+            >
+              <WifiOff size={24} className="mx-auto mb-3" style={{ color: 'rgba(107,117,153,0.4)' }} />
+              <p className="text-sm font-medium mb-1" style={{ color: 'var(--text)' }}>Backend nicht erreichbar</p>
+              <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>
+                Kursdaten werden nur über das Backend geladen.
+              </p>
+              <button onClick={loadData} className="btn-secondary text-xs">
+                <RefreshCw size={12} /> Erneut versuchen
+              </button>
+            </div>
+          ) : indices.length === 0 ? (
+            <div className="rounded-2xl p-8 text-center" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Keine Indexdaten verfügbar</p>
+            </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {indices.map(idx => <IndexCard key={idx.symbol} index={idx} />)}
+              {indices.map(idx => <IndexCard key={idx.symbol} index={idx} fetchedAt={fetchedAt} />)}
             </div>
           )}
         </section>
 
-        {/* Movers */}
+        {/* ── Größte Bewegungen ────────────────────────────────────────── */}
         <section>
-          <div className="flex items-center gap-2 mb-5">
-            <Activity size={15} className="text-primary" />
-            <h2 className="text-base font-semibold text-slate-800">Größte Bewegungen heute</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="card">
-              <div className="card-header flex items-center gap-2">
-                <TrendingUp size={13} className="text-success" />
-                <h3 className="text-sm font-semibold text-slate-700">Top Gewinner</h3>
-              </div>
-              <div className="card-body space-y-0">
-                {gainers.map(item => <MoverRow key={item.ticker} item={item} isGainer />)}
-              </div>
-            </div>
-            <div className="card">
-              <div className="card-header flex items-center gap-2">
-                <TrendingDown size={13} className="text-danger" />
-                <h3 className="text-sm font-semibold text-slate-700">Top Verlierer</h3>
-              </div>
-              <div className="card-body space-y-0">
-                {losers.map(item => <MoverRow key={item.ticker} item={item} isGainer={false} />)}
-              </div>
-            </div>
-          </div>
-        </section>
+          <h2
+            className="text-2xl font-bold mb-6"
+            style={{ fontFamily: "'Boska', serif", color: 'var(--text)' }}
+          >
+            Größte Bewegungen
+          </h2>
 
-        {/* AI Tools */}
-        <section>
-          <div className="flex items-center gap-2 mb-5">
-            <Cpu size={15} className="text-primary" />
-            <h2 className="text-base font-semibold text-slate-800">Die NEXUS KI-Tools</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-            {/* Elara */}
-            <div className="card hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-200 p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
-                  <Search size={19} className="text-primary" />
+          {backendOffline ? (
+            <div className="rounded-2xl p-8 text-center" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+              <WifiOff size={18} className="mx-auto mb-2" style={{ color: 'rgba(107,117,153,0.4)' }} />
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Backend offline</p>
+            </div>
+          ) : loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[1, 2].map(i => (
+                <div key={i} className="rounded-2xl p-5 space-y-3" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                  {[1,2,3].map(j => <div key={j} className="skeleton h-12 w-full rounded-xl" />)}
+                </div>
+              ))}
+            </div>
+          ) : gainers.length === 0 && losers.length === 0 ? (
+            <div className="rounded-2xl p-8 text-center" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Keine Daten verfügbar</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="rounded-2xl p-5" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                <div className="flex items-center gap-2 mb-4">
+                  <TrendingUp size={14} style={{ color: 'var(--success)' }} />
+                  <h3 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Top Gewinner</h3>
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">Elara</h3>
-                  <p className="text-xs text-slate-500">Sektor-Screener</p>
+                  {gainers.map(item => <MoverRow key={item.ticker} item={item} isGainer />)}
                 </div>
               </div>
-              <p className="text-sm text-slate-500 mb-5 leading-relaxed">
-                Quantamentaler Screening-Algorithmus. Analysiert bis zu 30 Titel pro Sektor nach
-                Bewertung, Qualität, Risiko und Wachstum.
+              <div className="rounded-2xl p-5" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                <div className="flex items-center gap-2 mb-4">
+                  <TrendingDown size={14} style={{ color: 'var(--danger)' }} />
+                  <h3 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Top Verlierer</h3>
+                </div>
+                <div>
+                  {losers.map(item => <MoverRow key={item.ticker} item={item} isGainer={false} />)}
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* ── WIE ES FUNKTIONIERT ──────────────────────────────────────── */}
+        <section ref={featuresRef}>
+          <div className="mb-8">
+            <h2
+              className="text-2xl font-bold mb-1"
+              style={{ fontFamily: "'Boska', serif", color: 'var(--text)' }}
+            >
+              Zwei KI-Systeme. Ein Ziel.
+            </h2>
+            <p className="text-xs uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+              Institutionelles Research — demokratisiert
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* ELARA */}
+            <div
+              className="feature-card rounded-2xl p-7"
+              style={{
+                background: 'var(--surface-2)',
+                border: '1px solid var(--border)',
+              }}
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center"
+                  style={{ background: 'rgba(79,142,247,0.12)', border: '1px solid rgba(79,142,247,0.2)' }}
+                >
+                  <Search size={18} style={{ color: 'var(--primary)' }} />
+                </div>
+                <div>
+                  <h3
+                    className="text-xl font-bold"
+                    style={{ fontFamily: "'Boska', serif", color: 'var(--text)' }}
+                  >
+                    Elara
+                  </h3>
+                  <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--primary)' }}>
+                    Sektor-Screener
+                  </p>
+                </div>
+              </div>
+              <p className="text-sm leading-relaxed mb-1" style={{ color: 'rgba(232,234,240,0.6)' }}>
+                Quantamentaler Screening-Algorithmus. Analysiert bis zu 30 Titel pro Sektor
+                nach Bewertung, Qualität, Risiko und Wachstum — und rankt sie im Elara Score.
               </p>
-              <div className="flex flex-wrap gap-1.5 mb-5">
+
+              <ElaraDemoTicker />
+
+              <div className="flex flex-wrap gap-2 mt-5">
                 {['14 Sektoren', 'Elara Score', 'Moat-Bewertung', 'Risikofilter'].map(tag => (
                   <span key={tag} className="badge badge-blue">{tag}</span>
                 ))}
               </div>
-              <Link to="/screener" className="btn-primary text-sm">
-                Screener öffnen
-                <ChevronRight size={13} />
+              <Link to="/screener" className="btn-secondary mt-5 w-full justify-center">
+                Screener öffnen <ChevronRight size={14} />
               </Link>
             </div>
 
-            {/* Altair */}
-            <div className="card hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-200 p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-                  style={{ background: 'linear-gradient(135deg, #1a3a5c15, #3672ae20)' }}>
-                  <Brain size={19} className="text-primary" />
+            {/* ALTAIR */}
+            <div
+              className="feature-card rounded-2xl p-7"
+              style={{
+                background: 'var(--surface-2)',
+                border: '1px solid var(--border)',
+              }}
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center"
+                  style={{ background: 'rgba(124,255,203,0.08)', border: '1px solid rgba(124,255,203,0.15)' }}
+                >
+                  <Brain size={18} style={{ color: 'var(--accent)' }} />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">Altair</h3>
-                  <p className="text-xs text-slate-500">Deep-Dive Analyst</p>
+                  <h3
+                    className="text-xl font-bold"
+                    style={{ fontFamily: "'Boska', serif", color: 'var(--text)' }}
+                  >
+                    Altair
+                  </h3>
+                  <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--accent)' }}>
+                    Deep-Dive Analyst
+                  </p>
                 </div>
               </div>
-              <p className="text-sm text-slate-500 mb-5 leading-relaxed">
+              <p className="text-sm leading-relaxed mb-1" style={{ color: 'rgba(232,234,240,0.6)' }}>
                 Vollständige Value-Analyse mit DCF-Modell, Szenario-Bewertung,
-                Pre-Mortem Stresstest und Conviction Score (0–7).
+                Pre-Mortem Stresstest und Conviction Score.
               </p>
-              <div className="flex flex-wrap gap-1.5 mb-5">
+
+              <ConvictionRing />
+
+              <div className="flex flex-wrap gap-2 mt-5">
                 {['DCF-Modell', 'Conviction 0–7', 'Timing-Signal', 'Rendite-Prognose'].map(tag => (
-                  <span key={tag} className="badge badge-gray">{tag}</span>
+                  <span key={tag} className="badge badge-green">{tag}</span>
                 ))}
               </div>
-              <Link to="/analyse" className="btn-primary text-sm">
-                Aktie analysieren
-                <ChevronRight size={13} />
+              <Link to="/analyse" className="btn-primary mt-5 w-full justify-center">
+                Aktie analysieren <ChevronRight size={14} />
               </Link>
             </div>
           </div>
         </section>
+
+        {/* ── CTA ──────────────────────────────────────────────────────── */}
+        <section className="cta-section pb-8">
+          <div
+            className="rounded-3xl p-12 sm:p-16 text-center relative overflow-hidden"
+            style={{
+              background: 'linear-gradient(135deg, rgba(79,142,247,0.12) 0%, rgba(124,255,203,0.06) 100%)',
+              border: '1px solid rgba(79,142,247,0.2)',
+            }}
+          >
+            <div
+              className="absolute pointer-events-none"
+              style={{
+                top: '-30%', left: '50%', transform: 'translateX(-50%)',
+                width: '500px', height: '300px',
+                background: 'radial-gradient(ellipse, rgba(79,142,247,0.15) 0%, transparent 70%)',
+                filter: 'blur(40px)',
+              }}
+            />
+            <div className="relative">
+              <p
+                className="text-xs font-semibold uppercase tracking-widest mb-4"
+                style={{ color: 'var(--primary)' }}
+              >
+                Bereit?
+              </p>
+              <h2
+                className="text-4xl sm:text-5xl font-bold mb-4 leading-tight"
+                style={{ fontFamily: "'Boska', serif", color: 'var(--text)' }}
+              >
+                Research auf institutionellem Niveau.
+              </h2>
+              <p className="text-base mb-10 max-w-md mx-auto" style={{ color: 'rgba(232,234,240,0.55)' }}>
+                Kein Bloomberg-Terminal. Keine 5-stellige Jahresgebühr.
+                Nur Ergebnisse.
+              </p>
+              <Link
+                to={user ? '/screener' : '/auth'}
+                className="inline-flex items-center gap-2 px-10 py-4 rounded-2xl text-base font-semibold transition-all duration-200"
+                style={{
+                  background: 'var(--accent)',
+                  color: '#0a0f1e',
+                  boxShadow: '0 0 48px rgba(124,255,203,0.35)',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 0 64px rgba(124,255,203,0.55)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
+                onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 0 48px rgba(124,255,203,0.35)'; e.currentTarget.style.transform = 'none' }}
+              >
+                {user ? 'Screener starten' : 'Kostenlos starten'} <ChevronRight size={18} />
+              </Link>
+            </div>
+          </div>
+        </section>
+
       </div>
+
+      {/* fade-in keyframe for ticker items */}
+      <style>{`
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   )
 }

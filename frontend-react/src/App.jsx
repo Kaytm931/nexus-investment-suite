@@ -16,10 +16,10 @@ function ProtectedRoute({ children }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg)' }}>
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-slate-500">Laden…</p>
+          <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--primary)', borderTopColor: 'transparent' }} />
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Laden…</p>
         </div>
       </div>
     )
@@ -34,15 +34,16 @@ function ProtectedRoute({ children }) {
 
 function Layout({ children, showTicker = true }) {
   return (
-    <div className="min-h-screen flex flex-col bg-surface">
+    <div className="min-h-screen flex flex-col" style={{ background: 'var(--bg)' }}>
+      <div className="grain-overlay" />
       <Header />
       {showTicker && <MarketTicker />}
       <main className="flex-1">
         {children}
       </main>
-      <footer className="border-t border-border bg-white py-4 mt-8 no-print">
+      <footer className="border-t py-5 mt-12 no-print" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-400">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs" style={{ color: 'var(--text-muted)' }}>
             <span>© 2025 NEXUS Investment Suite. Keine Anlageberatung — alle Analysen dienen nur zu Informationszwecken.</span>
             <span className="font-mono">v1.0.0</span>
           </div>
