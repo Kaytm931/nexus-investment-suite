@@ -1,34 +1,43 @@
-# NEXUS — Projektnavigation
+# NEXUS — Projektzentrale
 
-Willkommen im NEXUS Investment Suite Vault.
-Lies diese Datei zuerst — sie zeigt dir wo alles ist.
+> Lies diese Datei zuerst. Sie zeigt dir wo alles ist.
 
-| Datei | Zweck |
-|---|---|
-| [[KONTEXT]] | Vollständiger Projektstand, Architektur, Routen, Backend, Design System, nächste Schritte |
-| [[PROBLEME]] | Offene Bugs, bekannte Einschränkungen, TODOs |
-| [[CHANGELOG]] | Was wurde wann gebaut — vollständige Projekthistorie |
-| [[ENTSCHEIDUNGEN]] | Architektur-ADRs — warum wurde was so entschieden |
-| [[API]] | Alle Backend-Endpunkte, Request/Response-Formate, WebSocket-Protokoll |
-| [[ROADMAP]] | Geplante Features, Prioritäten, offene Ideen |
+## Navigation
 
----
+| Datei | Für wen | Zweck |
+|---|---|---|
+| [[DASHBOARD]] | 👤 Nutzer | Projektstatus, was läuft, was als nächstes |
+| [[KONTEXT]] | 🤖 Claude | Vollständiger technischer Stand, Architekturregeln |
+| [[PROBLEME]] | 👥 Beide | Offene Bugs, Einschränkungen, TODOs |
+| [[ROADMAP]] | 👤 Nutzer | Ideen, geplante Features, Prioritäten |
+| [[MUSTER]] | 🤖 Claude | Code-Patterns die immer korrekt sein müssen |
+| [[ENTSCHEIDUNGEN]] | 👥 Beide | Warum wurde was so gebaut |
+| [[CHANGELOG]] | 👥 Beide | Was wurde wann gemacht |
+| [[API]] | 🤖 Claude | Alle Backend-Endpunkte mit Request/Response |
 
 ## Schnellzugriff
-
-- Offene Bugs → [[PROBLEME#🔴 Offen]]
-- Nächste Schritte → [[KONTEXT#Nächste Schritte]]
-- Backend-Endpunkte → [[API]]
-- Design Tokens → [[KONTEXT#Design System]]
-- Deployment-Info → [[KONTEXT#Deployment]]
+- [[PROBLEME#🔴 Offen|🔴 Offene Bugs]]
+- [[DASHBOARD#📋 Was Claude beim nächsten Mal tun soll|📋 Aufgaben für Claude]]
+- [[KONTEXT#Nächste Schritte|➡️ Nächste Schritte]]
+- [[ROADMAP|💡 Ideen & Features]]
 
 ---
 
-## Projektübersicht in 3 Sätzen
+## 🤖 Anweisung für Claude Code — JEDE SESSION
 
-**NEXUS** ist eine institutionelle Investment-Analyse-WebApp.  
-**Elara** screent Sektoren quantamental (14 Sektoren, Elara Score 0–100).  
-**Altair** liefert Deep-Dive-Analysen mit DCF, Conviction Score 0–7 und Timing-Signal.
+**Am Anfang jeder Session:**
+1. Lies `NEXUS/KONTEXT.md` vollständig
+2. Lies `NEXUS/DASHBOARD.md` — besonders "Was Claude beim nächsten Mal tun soll"
+3. Lies `NEXUS/PROBLEME.md`
+4. Dann erst Code anfassen!
+
+**Am Ende jeder Session — automatisch, ohne explizite Aufforderung:**
+1. `DASHBOARD.md` → Projektstatus + "Was gerade läuft" aktualisieren
+2. `KONTEXT.md` → Dateistatus updaten, Nächste Schritte anpassen
+3. `PROBLEME.md` → Gelöste Bugs abhaken ✅, neue Bugs eintragen
+4. `CHANGELOG.md` → Neuen Eintrag mit Datum und Tätigkeiten hinzufügen
+5. `ENTSCHEIDUNGEN.md` → Neue Architekturentscheidungen ergänzen
+6. Bei größeren Änderungen (≥ 3 Dateien geändert oder grundlegendes Problem gelöst): `verlauf/SESSION_YYYY-MM-DD.md` anlegen
 
 ---
 
@@ -47,21 +56,3 @@ backend/
 
 NEXUS/              → Dieser Vault (Obsidian)
 ```
-
----
-
-## Technologien auf einen Blick
-
-| Layer | Tech |
-|---|---|
-| Frontend | React 18 + Vite + TailwindCSS |
-| Animationen | GSAP 3.14 + Lenis (Smooth Scroll) |
-| Charts | Recharts |
-| Auth | Supabase |
-| Backend | FastAPI (Python) |
-| KI primär | Groq Cloud (llama-3.3-70b-versatile) |
-| KI optional | Claude API, Ollama (lokal) |
-| Suche | Tavily Web Search |
-| Stock Data | yFinance |
-| Deploy Frontend | Vercel |
-| Deploy Backend | Render |

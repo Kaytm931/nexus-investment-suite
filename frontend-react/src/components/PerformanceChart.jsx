@@ -13,23 +13,23 @@ const PERIODS = [
 ]
 
 const SERIES_CONFIG = [
-  { key: 'portfolio', label: 'Portfolio', color: '#1a3a5c', strokeWidth: 2.5 },
-  { key: 'sp500', label: 'S&P 500', color: '#94a3b8', strokeWidth: 1.5, strokeDasharray: '4 2' },
-  { key: 'msci', label: 'MSCI World', color: '#60a5fa', strokeWidth: 1.5, strokeDasharray: '4 2' },
+  { key: 'portfolio', label: 'Portfolio', color: '#7cffcb', strokeWidth: 2.5 },
+  { key: 'sp500', label: 'S&P 500', color: '#6b7599', strokeWidth: 1.5, strokeDasharray: '4 2' },
+  { key: 'msci', label: 'MSCI World', color: '#4f8ef7', strokeWidth: 1.5, strokeDasharray: '4 2' },
 ]
 
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-white border border-border rounded-lg shadow-card-hover px-3 py-2 min-w-[160px]">
-      <p className="text-xs text-slate-500 mb-1.5">{label}</p>
+    <div className="px-3 py-2 min-w-[160px] rounded-lg" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
+      <p className="text-xs mb-1.5" style={{ color: 'var(--text-muted)' }}>{label}</p>
       {payload.map(entry => (
         <div key={entry.dataKey} className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
-            <span className="text-xs text-slate-600">{entry.name}</span>
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{entry.name}</span>
           </div>
-          <span className={`text-xs font-mono font-medium ${entry.value >= 100 ? 'text-success' : 'text-danger'}`}>
+          <span className="text-xs font-mono font-medium" style={{ color: entry.value >= 100 ? 'var(--accent)' : 'var(--danger)' }}>
             {entry.value >= 100 ? '+' : ''}{(entry.value - 100).toFixed(2)}%
           </span>
         </div>
@@ -84,28 +84,28 @@ export default function PerformanceChart({ data = {}, onPeriodChange }) {
         <div className="flex items-center gap-4">
           {portfolioReturn !== null && (
             <div>
-              <p className="text-xs text-slate-500">Gesamtrendite Portfolio</p>
-              <p className={`text-lg font-mono font-bold ${parseFloat(portfolioReturn) >= 0 ? 'text-success' : 'text-danger'}`}>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Gesamtrendite Portfolio</p>
+              <p className="text-lg font-mono font-bold" style={{ color: parseFloat(portfolioReturn) >= 0 ? 'var(--accent)' : 'var(--danger)' }}>
                 {parseFloat(portfolioReturn) >= 0 ? '+' : ''}{portfolioReturn}%
               </p>
             </div>
           )}
           {isDemo && (
-            <span className="badge badge-gray text-xs">Demo-Daten</span>
+            <span className="text-xs px-2 py-0.5 rounded-md" style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>Demo-Daten</span>
           )}
         </div>
 
         {/* Period selector */}
-        <div className="flex items-center bg-surface rounded-lg border border-border p-0.5">
+        <div className="flex items-center rounded-lg p-0.5" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
           {PERIODS.map(p => (
             <button
               key={p.value}
               onClick={() => handlePeriodChange(p.value)}
-              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
-                activePeriod === p.value
-                  ? 'bg-white text-primary shadow-sm'
-                  : 'text-slate-500 hover:text-slate-700'
-              }`}
+              className="px-2.5 py-1 text-xs font-medium rounded-md transition-colors"
+              style={activePeriod === p.value
+                ? { background: 'var(--surface-2)', color: 'var(--primary)', boxShadow: '0 1px 4px rgba(0,0,0,0.3)' }
+                : { color: 'var(--text-muted)' }
+              }
             >
               {p.label}
             </button>
@@ -115,16 +115,16 @@ export default function PerformanceChart({ data = {}, onPeriodChange }) {
 
       <ResponsiveContainer width="100%" height={280}>
         <LineChart data={displayData} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
           <XAxis
             dataKey="date"
-            tick={{ fontSize: 11, fill: '#94a3b8' }}
+            tick={{ fontSize: 11, fill: '#6b7599' }}
             tickLine={false}
             axisLine={false}
             interval="preserveStartEnd"
           />
           <YAxis
-            tick={{ fontSize: 11, fill: '#94a3b8' }}
+            tick={{ fontSize: 11, fill: '#6b7599' }}
             tickLine={false}
             axisLine={false}
             tickFormatter={v => `${v >= 100 ? '+' : ''}${(v - 100).toFixed(0)}%`}
@@ -138,10 +138,10 @@ export default function PerformanceChart({ data = {}, onPeriodChange }) {
               const lastVal = displayData[displayData.length - 1]?.[value]
               const ret = lastVal !== null ? (lastVal - 100).toFixed(1) : null
               return (
-                <span className="text-xs text-slate-600">
+                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
                   {cfg?.label}
                   {ret !== null && (
-                    <span className={`ml-1 font-mono font-medium ${parseFloat(ret) >= 0 ? 'text-success' : 'text-danger'}`}>
+                    <span className="ml-1 font-mono font-medium" style={{ color: parseFloat(ret) >= 0 ? 'var(--accent)' : 'var(--danger)' }}>
                       ({parseFloat(ret) >= 0 ? '+' : ''}{ret}%)
                     </span>
                   )}

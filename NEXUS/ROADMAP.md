@@ -1,109 +1,47 @@
-# NEXUS — Roadmap & Feature-Ideen
+# NEXUS — Roadmap & Ideen
 
 > Letzte Aktualisierung: 2026-04-02
 
 ---
 
-## Phase 3 — Stabilisierung (nächste Priorität)
+## 🎯 Kurzfristig — Technische Schulden aufräumen
 
-### Muss gemacht werden
-
-- [ ] **Portfolio-Persistenz sicherstellen**  
-  Prüfen ob Portfolio-Daten bei Render-Neustart verloren gehen.  
-  Wenn ja: Migration zu Supabase-Tabellen (`portfolio_positions`).  
-  Technisch: Supabase Client im Backend initialisieren, Queries über Supabase statt SQLite.
-
-- [ ] **`ticker-scroll` CSS aufräumen**  
-  In `index.css`: `@keyframes ticker-scroll` und `[class*="MarketTicker"]` Block sind toter Code.  
-  Kann einfach entfernt werden ohne Seiteneffekte.
-
-- [ ] **Error Boundaries**  
-  Mindestens 1 globale `<ErrorBoundary>` in `App.jsx`.  
-  Besser: pro Page, damit Analysis-Crash nicht die ganze App reißt.
-
-- [ ] **"Passwort vergessen" Flow**  
-  Supabase hat eingebautes `resetPasswordForEmail()`.  
-  Link in Auth.jsx hinzufügen, dann Supabase-E-Mail konfigurieren.
+- [ ] `index.css` bereinigen — toten `ticker-scroll` Keyframe entfernen (~5 Min.)
+- [ ] Error Boundaries in `App.jsx` einbauen (mind. um Analysis.jsx wrappen)
+- [ ] "Passwort vergessen" in Auth.jsx — Supabase `resetPasswordForEmail()`
+- [ ] Bundle-Size: `vite.config.js` → `manualChunks` für GSAP + Recharts
 
 ---
 
-## Phase 4 — Feature-Ausbau
+## 🔮 Mittelfristig — Features
 
-### Hoch priorisiert
-
-- [ ] **Watchlist**  
-  Aktien beobachten ohne zu kaufen.  
-  Storage: Supabase `watchlist`-Tabelle oder localStorage (einfachere Lösung).  
-  UI: Eigene Page `/watchlist` oder als Tab in Portfolio.
-
-- [ ] **Analyse-Verlauf / Cache**  
-  Vergangene Altair-Analysen speichern und wieder abrufen.  
-  Storage: Supabase `analyses`-Tabelle (ticker + timestamp + result).  
-  UI: Dropdown in Analysis.jsx "Letzte Analysen" oder eigene `/history`-Seite.
-
-- [ ] **PDF-Export (echtes Layout)**  
-  Aktuell: `window.print()` — kein optimiertes Print-Layout.  
-  Besser: `@media print` CSS komplett überarbeiten, oder `html2pdf.js`/`jsPDF` für clientseitiges PDF.
-
-- [ ] **Bundle-Size optimieren**  
-  `vite.config.js`: `build.rollupOptions.output.manualChunks` definieren.  
-  Vorschlag: GSAP in eigenen Chunk, Recharts in eigenen Chunk, Vendor (React/Router) getrennt.  
-  Ziel: Kein Chunk > 300 kB.
-
-### Mittel priorisiert
-
-- [ ] **Elara Ergebnisse cachen**  
-  Backend hat `cached: true/false` im Response aber es ist unklar ob Caching wirklich implementiert ist.  
-  In-Memory Cache im Backend (Dict mit sector → result + timestamp) für 1h.
-
-- [ ] **Multi-Provider Support in Settings verbessern**  
-  Aktuell: User kann Keys eingeben aber hat keine Übersicht welche aktiv sind.  
-  Verbesserung: Settings zeigt gespeicherte Keys (maskiert), Aktiv/Inaktiv-Toggle pro Provider.
-
-- [ ] **Mobile UX — Portfolio-Tabelle**  
-  Portfolio-Tabelle ist auf Mobile nicht responsive (zu viele Spalten).  
-  Lösung: Card-View auf `< md` Breakpoint statt Tabelle.
-
-- [ ] **Sektor-Gewichtungs-Donut-Chart in Portfolio**  
-  Recharts `PieChart` oder `RadialBarChart` für Sektor-Verteilung.  
-  Zeigt wo Klumpenrisiken sind — ergänzt die bestehenden Risiko-Warnungen.
-
-### Niedrig priorisiert
-
-- [ ] **Light Mode**  
-  Technisch via CSS-Custom-Properties möglich.  
-  Aufwand hoch: alle `rgba(255,255,255,x)` müssen invertiert werden.
-
-- [ ] **Ollama-Setup-Guide**  
-  Step-by-Step-Anleitung für lokale KI-Nutzung (kein API-Key nötig).  
-  Als Modal in Settings oder als eigene Docs-Page.
-
-- [ ] **Alpha Vantage vollständig integrieren**  
-  Key wird gespeichert aber kaum genutzt.  
-  Als Fallback wenn yFinance fehlschlägt (v.a. für europäische Aktien).
-
-- [ ] **Mehrsprachigkeit (EN/DE)**  
-  Aktuell: Alles auf Deutsch.  
-  Für breiteren Nutzerkreis: i18n mit `react-i18next`.
-
-- [ ] **Benachrichtigungen / Alerts**  
-  "Benachrichtige mich wenn AAPL unter X fällt" — per E-Mail via Supabase Edge Functions.
+- [ ] **Portfolio-Persistenz klären** — SQLite oder Supabase auf Render persistent machen
+- [ ] **Echte Live-Kurse** — yFinance Polling alle 60s im Backend (Server-Sent Events oder WebSocket)
+- [ ] **Portfolio — Transaktions-History** — Nicht nur aktuelle Position, sondern Kaufhistorie
+- [ ] **Screener — CSV-Export** — Elara-Ergebnisse als Download
+- [ ] **Settings — Key-Vorschau** — Zeige gespeicherte Keys als `gsk_****` an
+- [ ] **Watchlist** — Aktien auf Watchlist setzen und von Home aus überwachen
+- [ ] **Altair — Caching verbessern** — Wie lange sind gecachte Reports gültig? UI-Indikator für "Stand: vor X Stunden"
 
 ---
 
-## Langfristige Vision
+## 💡 Ideen — Noch nicht entschieden
 
-- [ ] **Community-Analysen** — Nutzer können Analysen teilen (opt-in)
-- [ ] **Backtesting** — Conviction Score vs. tatsächliche Performance rückwirkend testen
-- [ ] **Podcast/News-Integration** — Earnings Call Transkripte in Altair-Analyse einbeziehen
-- [ ] **API-as-a-Service** — NEXUS als API für andere Entwickler (Waitlist/Pricing)
+> (Hier kannst du selbst Ideen eintragen oder streichem)
+
+- **Finnhub WebSocket** für echte Echtzeit-Kurse (US-Aktien) statt yFinance-Polling?
+- **Dark/Light Mode Toggle** für den Nutzer? (Aktuell: nur Dark)
+- **Mobile-Optimierung** — Header-Navigation auf kleinen Screens verbessern
+- **Portfolio-Alerts** — Push-Benachrichtigung bei Kurs-Schwelle
+- **Altair PDF-Export** — Echter PDF-Download statt Browser-Print
+- **Multi-Language** — Deutsche UI + englische Analysen (aktuell gemischt)
+- **Onboarding-Flow** — Neuen Nutzern erklären was Groq-Key ist und wie man ihn einrichtet
 
 ---
 
-## Bekannte "Never Do" Liste
+## 🚫 Explizit NICHT geplant
 
-- ❌ Docker einführen (zu komplexer Deploy-Flow für einzelne Entwickler)
-- ❌ Redux/MobX einführen (React Context ist ausreichend für diesen Scale)
-- ❌ Tailwind-Konfiguration zu stark erweitern (Design-Token-System in CSS-Variablen bleiben)
-- ❌ Hardcodierte API-Endpunkte (immer über `VITE_API_BASE`)
-- ❌ Light-Theme Klassen in neuen Dateien (`bg-white`, `text-slate-*`, `text-gray-*`)
+- Keine echte Bezahlfunktion / SaaS-Paywall
+- Keine Multi-User-Verwaltung / Teilen von Portfolios
+- Kein Docker (Pinokio-Launcher nutzt native Installs)
+- Keine Playwright-Tests (wurden bewusst entfernt)

@@ -1,4 +1,4 @@
-@tailwind base;
+﻿@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
@@ -243,13 +243,6 @@
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.18); }
 
-/* ── Ticker ─────────────────────────────────────────────────────────────────── */
-@keyframes ticker-scroll {
-  0%   { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
-}
-.ticker-scroll { animation: ticker-scroll 40s linear infinite; }
-.ticker-scroll:hover { animation-play-state: paused; }
 
 /* ── Nav link underline ─────────────────────────────────────────────────────── */
 .nav-link {
@@ -345,7 +338,6 @@
     margin-bottom: 12pt;
   }
   header, nav, footer,
-  [class*="MarketTicker"],
   [class*="no-print"],
   .grain-overlay { display: none !important; }
   table { page-break-inside: avoid; }

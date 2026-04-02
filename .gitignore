@@ -54,6 +54,10 @@ Thumbs.db
 desktop.ini
 *.lnk
 
+# ── Obsidian ─────────────────────────────────────────────────────────────────
+# Obsidian config contains user-specific settings and plugin files with embedded credentials
+NEXUS/.obsidian/
+
 # ── Editor ───────────────────────────────────────────────────────────────────
 .vscode/
 .idea/
