@@ -75,8 +75,8 @@ export default function Auth() {
           <div className="inline-flex items-center justify-center w-12 h-12 bg-primary rounded-xl mb-3">
             <TrendingUp size={22} className="text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">NEXUS Investment Suite</h1>
-          <p className="text-sm text-slate-500 mt-1">Institutionelle Analyse für jeden</p>
+          <h1 className="text-2xl font-bold" style={{ fontFamily: "'Boska', serif", color: 'var(--text)' }}>NEXUS Investment Suite</h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>Institutionelle Analyse für jeden</p>
         </div>
 
         <div className="card">
@@ -84,21 +84,15 @@ export default function Auth() {
           <div className="flex border-b border-border">
             <button
               onClick={() => { setTab('login'); setError(''); setSuccess('') }}
-              className={`flex-1 py-3.5 text-sm font-medium transition-colors ${
-                tab === 'login'
-                  ? 'text-primary border-b-2 border-primary'
-                  : 'text-slate-500 hover:text-slate-700'
-              }`}
+              className={`flex-1 py-3.5 text-sm font-medium transition-colors ${tab === 'login' ? 'border-b-2 border-primary' : ''}`}
+              style={{ color: tab === 'login' ? 'var(--primary)' : 'var(--text-muted)' }}
             >
               Anmelden
             </button>
             <button
               onClick={() => { setTab('register'); setError(''); setSuccess('') }}
-              className={`flex-1 py-3.5 text-sm font-medium transition-colors ${
-                tab === 'register'
-                  ? 'text-primary border-b-2 border-primary'
-                  : 'text-slate-500 hover:text-slate-700'
-              }`}
+              className={`flex-1 py-3.5 text-sm font-medium transition-colors ${tab === 'register' ? 'border-b-2 border-primary' : ''}`}
+              style={{ color: tab === 'register' ? 'var(--primary)' : 'var(--text-muted)' }}
             >
               Registrieren
             </button>
@@ -148,7 +142,7 @@ export default function Auth() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(v => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors hover:text-[var(--text)]" style={{ color: 'var(--text-muted)' }}
                     >
                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
@@ -206,7 +200,7 @@ export default function Auth() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(v => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors hover:text-[var(--text)]" style={{ color: 'var(--text-muted)' }}
                     >
                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
@@ -227,7 +221,7 @@ export default function Auth() {
                     <button
                       type="button"
                       onClick={() => setShowConfirm(v => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors hover:text-[var(--text)]" style={{ color: 'var(--text-muted)' }}
                     >
                       {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
@@ -244,15 +238,15 @@ export default function Auth() {
               </form>
             )}
 
-            <p className="text-xs text-slate-400 text-center mt-4 leading-relaxed">
+            <p className="text-xs text-center mt-4 leading-relaxed" style={{ color: 'var(--text-muted)' }}>
               Mit der Registrierung stimmst du zu, dass NEXUS keine Anlageberatung bietet.
               Alle Analysen dienen ausschließlich zu Informationszwecken.
             </p>
           </div>
         </div>
 
-        <p className="text-center text-xs text-slate-400 mt-4">
-          <Link to="/" className="hover:text-primary transition-colors">Zurück zur Startseite</Link>
+        <p className="text-center text-xs mt-4" style={{ color: 'var(--text-muted)' }}>
+          <Link to="/" className="hover:text-primary transition-colors" style={{ color: 'var(--text-muted)' }}>Zurück zur Startseite</Link>
         </p>
       </div>
     </div>

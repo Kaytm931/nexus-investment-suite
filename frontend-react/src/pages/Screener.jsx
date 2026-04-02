@@ -1,8 +1,9 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import ApiKeyGate from '../components/ApiKeyGate'
 import { runElaraScreener } from '../lib/api'
+import { gsap } from 'gsap'
 import {
   Search, Loader2, AlertCircle, ChevronRight, Info,
   ArrowUpDown, ArrowUp, ArrowDown, Download
@@ -61,7 +62,7 @@ function parseMarkdownTable(markdown) {
 }
 
 function SortIcon({ column, sortCol, sortDir }) {
-  if (sortCol !== column) return <ArrowUpDown size={12} className="text-slate-300" />
+  if (sortCol !== column) return <ArrowUpDown size={12} style={{ color: 'var(--border)' }} />
   return sortDir === 'asc'
     ? <ArrowUp size={12} className="text-primary" />
     : <ArrowDown size={12} className="text-primary" />
@@ -114,30 +115,39 @@ function ResultsTable({ markdown, onTickerClick }) {
           </tr>
         </thead>
         <tbody>
-          {sortedRows.map((row, ri) => (
-            <tr key={ri}>
-              {row.map((cell, ci) => (
-                <td key={ci}>
-                  {ci === tickerIdx ? (
-                    <button
-                      onClick={() => onTickerClick(cell)}
-                      className="font-mono font-semibold text-primary hover:underline cursor-pointer"
-                    >
-                      {cell}
-                    </button>
-                  ) : (
-                    <span className={
-                      /^[+-]?\d+\.?\d*%?$/.test(cell.trim()) && !['#', '1'].includes(cell.trim())
-                        ? 'num text-slate-700'
-                        : 'text-slate-700'
-                    }>
-                      {cell}
-                    </span>
-                  )}
-                </td>
-              ))}
-            </tr>
-          ))}
+          {sortedRows.map((row, ri) => {
+            const scoreIdx = headers.findIndex(h => /score/i.test(h))
+            const scoreVal = scoreIdx >= 0 ? parseFloat((row[scoreIdx] || '').replace(/[^0-9.-]/g, '')) : null
+            return (
+              <tr key={ri} className="screener-row">
+                {row.map((cell, ci) => {
+                  const isScore = ci === scoreIdx && scoreVal !== null
+                  const scoreColor = isScore
+                    ? scoreVal > 70 ? 'var(--accent)' : scoreVal < 40 ? 'var(--danger)' : 'var(--text)'
+                    : null
+                  return (
+                    <td key={ci}>
+                      {ci === tickerIdx ? (
+                        <button
+                          onClick={() => onTickerClick(cell)}
+                          className="font-mono font-semibold text-primary hover:underline cursor-pointer"
+                        >
+                          {cell}
+                        </button>
+                      ) : (
+                        <span
+                          className={/^[+-]?\d+\.?\d*%?$/.test(cell.trim()) && !['#', '1'].includes(cell.trim()) ? 'num' : ''}
+                          style={{ color: scoreColor || 'var(--text-muted)' }}
+                        >
+                          {cell}
+                        </span>
+                      )}
+                    </td>
+                  )
+                })}
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>
@@ -153,6 +163,16 @@ function extractNonTable(text) {
 export default function Screener() {
   const { hasApiKey } = useAuth()
   const navigate = useNavigate()
+
+  // GSAP row stagger when results arrive
+  useEffect(() => {
+    if (result) {
+      gsap.fromTo('.screener-row',
+        { opacity: 0, x: -16 },
+        { opacity: 1, x: 0, stagger: 0.04, duration: 0.35, ease: 'power2.out' }
+      )
+    }
+  }, [result])
 
   const [form, setForm] = useState({
     sector: 'Technology',
@@ -218,13 +238,13 @@ export default function Screener() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Page header */}
       <div className="mb-6">
-        <div className="flex items-center gap-2 text-xs text-slate-500 mb-2">
-          <Link to="/" className="hover:text-primary">Märkte</Link>
+        <div className="flex items-center gap-2 text-xs mb-2" style={{ color: 'var(--text-muted)' }}>
+          <Link to="/" className="hover:text-primary" style={{ color: 'var(--text-muted)' }}>Märkte</Link>
           <ChevronRight size={12} />
-          <span className="text-slate-700">Elara Screener</span>
+          <span style={{ color: 'var(--text)' }}>Elara Screener</span>
         </div>
-        <h1 className="text-2xl font-bold text-slate-900">Elara Sektor-Screener</h1>
-        <p className="text-sm text-slate-500 mt-1">
+        <h1 className="text-2xl font-bold" style={{ color: 'var(--text)', fontFamily: "'Boska', serif" }}>Elara Sektor-Screener</h1>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
           Quantamentaler Screening-Algorithmus — identifiziert die besten Titel pro Sektor
         </p>
       </div>
@@ -235,7 +255,7 @@ export default function Screener() {
           <div className="lg:col-span-1">
             <div className="card sticky top-20">
               <div className="card-header">
-                <h2 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: 'var(--text)' }}>
                   <Search size={14} />
                   Screening-Parameter
                 </h2>
@@ -306,20 +326,20 @@ export default function Screener() {
                     value={form.exclusions}
                     onChange={e => handleChange('exclusions', e.target.value)}
                   />
-                  <p className="text-xs text-slate-400 mt-1">Kommagetrennte Ausschlusskriterien</p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Kommagetrennte Ausschlusskriterien</p>
                 </div>
 
                 {/* Progress bar */}
                 {loading && (
                   <div className="space-y-1.5">
-                    <div className="flex items-center justify-between text-xs text-slate-500">
+                    <div className="flex items-center justify-between text-xs" style={{ color: 'var(--text-muted)' }}>
                       <span className="flex items-center gap-1.5">
                         <Loader2 size={12} className="animate-spin" />
                         Elara analysiert…
                       </span>
                       <span className="font-mono">{progress}%</span>
                     </div>
-                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--border)' }}>
                       <div
                         className="h-full bg-primary rounded-full transition-all duration-300"
                         style={{ width: `${progress}%` }}
@@ -363,8 +383,8 @@ export default function Screener() {
                 <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
                   <Search size={20} className="text-primary" />
                 </div>
-                <h3 className="text-sm font-semibold text-slate-700 mb-1">Bereit zum Screening</h3>
-                <p className="text-sm text-slate-500">
+                <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text)' }}>Bereit zum Screening</h3>
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
                   Wähle einen Sektor und starte die Analyse. Elara identifiziert bis zu 30 Titel
                   nach Bewertung, Qualität, Risiko und Wachstum.
                 </p>
@@ -377,10 +397,10 @@ export default function Screener() {
                 {tableMarkdown && (
                   <div className="card">
                     <div className="card-header flex items-center justify-between">
-                      <h2 className="text-sm font-semibold text-slate-700">
+                      <h2 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>
                         Ergebnisse — {SECTORS.find(s => s.value === form.sector)?.label}
                       </h2>
-                      <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                      <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>
                         <Info size={12} />
                         Klicke auf Ticker für Deep-Dive
                       </div>
@@ -398,10 +418,10 @@ export default function Screener() {
                 {nonTableText && (
                   <div className="card">
                     <div className="card-header">
-                      <h2 className="text-sm font-semibold text-slate-700">Elara Einschätzung</h2>
+                      <h2 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Elara Einschätzung</h2>
                     </div>
                     <div className="card-body">
-                      <div className="markdown-content prose-sm max-w-none text-slate-600 whitespace-pre-wrap text-sm leading-relaxed">
+                      <div className="markdown-content prose-sm max-w-none whitespace-pre-wrap text-sm leading-relaxed" style={{ color: 'var(--text-muted)' }}>
                         {nonTableText}
                       </div>
                     </div>

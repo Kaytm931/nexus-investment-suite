@@ -83,12 +83,12 @@ function PositionModal({ position, onSave, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-          <h2 className="text-base font-semibold text-slate-800">
+      <div className="rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
+          <h2 className="text-base font-semibold" style={{ color: 'var(--text)' }}>
             {isEdit ? 'Position bearbeiten' : 'Position hinzufügen'}
           </h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors">
+          <button onClick={onClose} className="transition-colors" style={{ color: 'var(--text-muted)' }}>
             <X size={20} />
           </button>
         </div>
@@ -114,16 +114,19 @@ function PositionModal({ position, onSave, onClose }) {
                   required
                 />
                 {tickerOpen && tickerResults.length > 0 && (
-                  <div className="absolute top-full mt-1 w-full bg-white border border-border rounded-lg shadow-card-hover z-10">
+                  <div className="absolute top-full mt-1 w-full rounded-lg z-10" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', boxShadow: '0 16px 48px rgba(0,0,0,0.5)' }}>
                     {tickerResults.map((r, i) => (
                       <button
                         key={i}
                         type="button"
-                        className="flex items-center justify-between w-full px-3 py-2 hover:bg-surface border-b border-border/50 last:border-0 text-left"
+                        className="flex items-center justify-between w-full px-3 py-2 text-left transition-colors"
+                        style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(79,142,247,0.06)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                         onClick={() => selectTicker(r)}
                       >
                         <span className="font-mono font-medium text-sm text-primary">{r.symbol || r.ticker}</span>
-                        <span className="text-xs text-slate-500 truncate max-w-[150px]">{r.name || r.shortname}</span>
+                        <span className="text-xs truncate max-w-[150px]" style={{ color: 'var(--text-muted)' }}>{r.name || r.shortname}</span>
                       </button>
                     ))}
                   </div>
@@ -224,10 +227,10 @@ function PositionModal({ position, onSave, onClose }) {
 function DeleteConfirm({ position, onConfirm, onCancel, loading }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
-        <h3 className="text-base font-semibold text-slate-800 mb-2">Position löschen?</h3>
-        <p className="text-sm text-slate-500 mb-5">
-          Möchtest du <strong className="text-slate-700">{position.ticker} — {position.name}</strong> wirklich aus deinem Portfolio entfernen?
+      <div className="rounded-2xl shadow-2xl p-6 max-w-sm w-full" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+        <h3 className="text-base font-semibold mb-2" style={{ color: 'var(--text)' }}>Position löschen?</h3>
+        <p className="text-sm mb-5" style={{ color: 'var(--text-muted)' }}>
+          Möchtest du <strong style={{ color: 'var(--text)' }}>{position.ticker} — {position.name}</strong> wirklich aus deinem Portfolio entfernen?
         </p>
         <div className="flex gap-3">
           <button onClick={onCancel} className="btn-secondary flex-1 justify-center">Abbrechen</button>
@@ -243,7 +246,7 @@ function DeleteConfirm({ position, onConfirm, onCancel, loading }) {
 
 // ─── Sort helpers ─────────────────────────────────────────────────────────────
 function SortIcon({ col, sortCol, sortDir }) {
-  if (sortCol !== col) return <ArrowUpDown size={11} className="text-slate-300" />
+  if (sortCol !== col) return <ArrowUpDown size={11} style={{ color: 'var(--border)' }} />
   return sortDir === 'asc'
     ? <ArrowUp size={11} className="text-primary" />
     : <ArrowDown size={11} className="text-primary" />
@@ -378,7 +381,7 @@ export default function Portfolio() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-center py-20">
           <Loader2 size={24} className="animate-spin text-primary" />
-          <span className="ml-2 text-slate-500">Portfolio wird geladen…</span>
+          <span className="ml-2" style={{ color: 'var(--text-muted)' }}>Portfolio wird geladen…</span>
         </div>
       </div>
     )
@@ -406,13 +409,13 @@ export default function Portfolio() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4 mb-6">
         <div>
-          <div className="flex items-center gap-2 text-xs text-slate-500 mb-2">
-            <Link to="/" className="hover:text-primary">Märkte</Link>
+          <div className="flex items-center gap-2 text-xs mb-2" style={{ color: 'var(--text-muted)' }}>
+            <Link to="/" className="hover:text-primary" style={{ color: 'var(--text-muted)' }}>Märkte</Link>
             <ChevronRight size={12} />
-            <span className="text-slate-700">Portfolio</span>
+            <span style={{ color: 'var(--text)' }}>Portfolio</span>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">Mein Portfolio</h1>
-          <p className="text-sm text-slate-500 mt-1">{positions.length} Position{positions.length !== 1 ? 'en' : ''}</p>
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--text)', fontFamily: "'Boska', serif" }}>Mein Portfolio</h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{positions.length} Position{positions.length !== 1 ? 'en' : ''}</p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -443,35 +446,35 @@ export default function Portfolio() {
       {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div className="card p-4">
-          <p className="text-xs text-slate-500 mb-1">Gesamtwert</p>
-          <p className="text-xl font-mono font-bold text-slate-900">{formatCurrency(totalValue)}</p>
+          <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Gesamtwert</p>
+          <p className="text-xl font-mono font-bold" style={{ color: 'var(--text)' }}>{formatCurrency(totalValue)}</p>
         </div>
         <div className="card p-4">
-          <p className="text-xs text-slate-500 mb-1">Gesamt G/V</p>
-          <p className={`text-xl font-mono font-bold ${totalPnl >= 0 ? 'text-success' : 'text-danger'}`}>
+          <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Gesamt G/V</p>
+          <p className="text-xl font-mono font-bold" style={{ color: totalPnl >= 0 ? 'var(--accent)' : 'var(--danger)' }}>
             {totalPnl >= 0 ? '+' : ''}{formatCurrency(totalPnl)}
           </p>
-          <p className={`text-xs font-mono mt-0.5 ${totalPnlPct >= 0 ? 'text-success' : 'text-danger'}`}>
+          <p className="text-xs font-mono mt-0.5" style={{ color: totalPnlPct >= 0 ? 'var(--accent)' : 'var(--danger)' }}>
             {totalPnlPct >= 0 ? '+' : ''}{(totalPnlPct * 100).toFixed(2)}%
           </p>
         </div>
         <div className="card p-4">
-          <p className="text-xs text-slate-500 mb-1">Beste Position</p>
+          <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Beste Position</p>
           {bestPos ? (
             <>
-              <p className="text-sm font-mono font-bold text-success">{bestPos.ticker}</p>
-              <p className="text-xs font-mono text-success">+{(bestPos.pct * 100).toFixed(2)}%</p>
+              <p className="text-sm font-mono font-bold" style={{ color: 'var(--accent)' }}>{bestPos.ticker}</p>
+              <p className="text-xs font-mono" style={{ color: 'var(--accent)' }}>+{(bestPos.pct * 100).toFixed(2)}%</p>
             </>
-          ) : <p className="text-sm text-slate-400">—</p>}
+          ) : <p className="text-sm" style={{ color: 'var(--text-muted)' }}>—</p>}
         </div>
         <div className="card p-4">
-          <p className="text-xs text-slate-500 mb-1">Schlechteste Position</p>
+          <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Schlechteste Position</p>
           {worstPos && worstPos.pct < 0 ? (
             <>
-              <p className="text-sm font-mono font-bold text-danger">{worstPos.ticker}</p>
-              <p className="text-xs font-mono text-danger">{(worstPos.pct * 100).toFixed(2)}%</p>
+              <p className="text-sm font-mono font-bold" style={{ color: 'var(--danger)' }}>{worstPos.ticker}</p>
+              <p className="text-xs font-mono" style={{ color: 'var(--danger)' }}>{(worstPos.pct * 100).toFixed(2)}%</p>
             </>
-          ) : <p className="text-sm text-slate-400">—</p>}
+          ) : <p className="text-sm" style={{ color: 'var(--text-muted)' }}>—</p>}
         </div>
       </div>
 
@@ -481,8 +484,8 @@ export default function Portfolio() {
           <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
             <Briefcase size={20} className="text-primary" />
           </div>
-          <h3 className="text-sm font-semibold text-slate-700 mb-1">Portfolio ist leer</h3>
-          <p className="text-sm text-slate-500 mb-4">Füge deine erste Position hinzu, um dein Portfolio zu tracken.</p>
+          <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text)' }}>Portfolio ist leer</h3>
+          <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>Füge deine erste Position hinzu, um dein Portfolio zu tracken.</p>
           <button onClick={() => setShowModal(true)} className="btn-primary mx-auto">
             <Plus size={14} />
             Erste Position hinzufügen
@@ -491,7 +494,7 @@ export default function Portfolio() {
       ) : (
         <div className="card mb-6">
           <div className="card-header">
-            <h2 className="text-sm font-semibold text-slate-700">Positionen</h2>
+            <h2 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Positionen</h2>
           </div>
           <div className="table-container rounded-none border-0">
             <table className="data-table">
@@ -511,7 +514,7 @@ export default function Portfolio() {
                   ].map(({ col, label }) => (
                     <th key={col}>
                       {col !== 'actions' ? (
-                        <button className="flex items-center gap-1 hover:text-slate-700 transition-colors" onClick={() => handleSort(col)}>
+                        <button className="flex items-center gap-1 transition-colors hover:text-primary" onClick={() => handleSort(col)}>
                           {label}
                           <SortIcon col={col} sortCol={sortCol} sortDir={sortDir} />
                         </button>
@@ -534,7 +537,7 @@ export default function Portfolio() {
                           {pos.ticker}
                         </Link>
                       </td>
-                      <td className="max-w-[160px] truncate text-slate-700">{pos.name || '—'}</td>
+                      <td className="max-w-[160px] truncate" style={{ color: 'var(--text-muted)' }}>{pos.name || '—'}</td>
                       <td className="num">{formatCurrency(pos.purchase_price)}</td>
                       <td className="num">{formatCurrency(curPrice)}</td>
                       <td className={`num ${positive ? 'positive' : 'negative'}`}>
@@ -545,23 +548,27 @@ export default function Portfolio() {
                       </td>
                       <td className="num">{(weight * 100).toFixed(1)}%</td>
                       <td>
-                        {pos.sector ? <span className="badge badge-blue">{pos.sector}</span> : <span className="text-slate-400">—</span>}
+                        {pos.sector ? <span className="badge badge-blue">{pos.sector}</span> : <span style={{ color: 'var(--text-muted)' }}>—</span>}
                       </td>
                       <td>
-                        {pos.region ? <span className="badge badge-gray">{pos.region}</span> : <span className="text-slate-400">—</span>}
+                        {pos.region ? <span className="badge badge-gray">{pos.region}</span> : <span style={{ color: 'var(--text-muted)' }}>—</span>}
                       </td>
                       <td>
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() => setEditPosition(pos)}
-                            className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-md transition-colors"
+                            className="p-1.5 hover:text-primary hover:bg-primary/10 rounded-md transition-colors"
+                            style={{ color: 'var(--text-muted)' }}
                             title="Bearbeiten"
                           >
                             <Pencil size={13} />
                           </button>
                           <button
                             onClick={() => setDeleteTarget(pos)}
-                            className="p-1.5 text-slate-400 hover:text-danger hover:bg-danger-light rounded-md transition-colors"
+                            className="p-1.5 hover:bg-danger/10 rounded-md transition-colors"
+                            style={{ color: 'var(--text-muted)' }}
+                            onMouseEnter={e => e.currentTarget.style.color = 'var(--danger)'}
+                            onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                             title="Löschen"
                           >
                             <Trash2 size={13} />
@@ -581,7 +588,7 @@ export default function Portfolio() {
       {positions.length > 0 && (
         <div className="card mb-6">
           <div className="card-header">
-            <h2 className="text-sm font-semibold text-slate-700">Performance vs. Benchmarks</h2>
+            <h2 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Performance vs. Benchmarks</h2>
           </div>
           <div className="card-body">
             <PerformanceChart
@@ -598,8 +605,8 @@ export default function Portfolio() {
       {positions.length > 0 && (sectorWarnings.length > 0 || regionWarnings.length > 0) && (
         <div className="card">
           <div className="card-header">
-            <h2 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-              <AlertTriangle size={14} className="text-amber-500" />
+            <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: 'var(--text)' }}>
+              <AlertTriangle size={14} style={{ color: '#f59e0b' }} />
               Risiko-Hinweise
             </h2>
           </div>

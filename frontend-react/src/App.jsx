@@ -2,7 +2,6 @@ import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import Header from './components/Header'
-import MarketTicker from './components/MarketTicker'
 import Home from './pages/Home'
 import Auth from './pages/Auth'
 import Screener from './pages/Screener'
@@ -32,12 +31,11 @@ function ProtectedRoute({ children }) {
   return children
 }
 
-function Layout({ children, showTicker = true }) {
+function Layout({ children }) {
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'var(--bg)' }}>
       <div className="grain-overlay" />
       <Header />
-      {showTicker && <MarketTicker />}
       <main className="flex-1">
         {children}
       </main>
@@ -62,7 +60,7 @@ function AppRoutes() {
         </Layout>
       } />
       <Route path="/auth" element={
-        <Layout showTicker={false}>
+        <Layout >
           <Auth />
         </Layout>
       } />
@@ -89,7 +87,7 @@ function AppRoutes() {
       } />
       <Route path="/settings" element={
         <ProtectedRoute>
-          <Layout showTicker={false}>
+          <Layout >
             <Settings />
           </Layout>
         </ProtectedRoute>

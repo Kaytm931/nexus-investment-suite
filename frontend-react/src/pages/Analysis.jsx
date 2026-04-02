@@ -21,11 +21,11 @@ function MarkdownSection({ content, className = '' }) {
   // Convert basic markdown to HTML-like display
   const lines = content.split('\n')
   return (
-    <div className={`space-y-2 text-sm text-slate-600 leading-relaxed ${className}`}>
+    <div className={`space-y-2 text-sm leading-relaxed ${className}`} style={{ color: 'var(--text-muted)' }}>
       {lines.map((line, i) => {
-        if (line.startsWith('## ')) return <h2 key={i} className="text-base font-semibold text-slate-800 mt-4 mb-2 pb-1.5 border-b border-border">{line.replace('## ', '')}</h2>
-        if (line.startsWith('### ')) return <h3 key={i} className="text-sm font-semibold text-slate-700 mt-3 mb-1.5">{line.replace('### ', '')}</h3>
-        if (line.startsWith('- ') || line.startsWith('• ')) return <p key={i} className="flex gap-2"><span className="text-slate-400 mt-0.5">•</span><span>{line.replace(/^[-•] /, '')}</span></p>
+        if (line.startsWith('## ')) return <h2 key={i} className="text-base font-semibold mt-4 mb-2 pb-1.5" style={{ color: 'var(--text)', borderBottom: '1px solid var(--border)', fontFamily: "'Boska', serif" }}>{line.replace('## ', '')}</h2>
+        if (line.startsWith('### ')) return <h3 key={i} className="text-sm font-semibold mt-3 mb-1.5" style={{ color: 'var(--text)' }}>{line.replace('### ', '')}</h3>
+        if (line.startsWith('- ') || line.startsWith('• ')) return <p key={i} className="flex gap-2"><span className="mt-0.5" style={{ color: 'var(--primary)' }}>•</span><span>{line.replace(/^[-•] /, '')}</span></p>
         if (line.startsWith('| ')) return null // tables handled separately
         if (line.match(/^\d+\./)) return <p key={i} className="pl-2">{line}</p>
         if (line.trim() === '') return null
@@ -49,7 +49,7 @@ function parseMarkdownTable(text) {
 
 function SimpleTable({ markdown }) {
   const parsed = parseMarkdownTable(markdown)
-  if (!parsed) return <p className="text-sm text-slate-400 italic">{markdown}</p>
+  if (!parsed) return <p className="text-sm italic" style={{ color: 'var(--text-muted)' }}>{markdown}</p>
   return (
     <div className="table-container">
       <table className="data-table">
@@ -87,16 +87,16 @@ function TimingBadge({ signal }) {
 function DCFChart({ scenarios, currentPrice }) {
   if (!scenarios?.length) return null
   const data = scenarios.map(s => ({ name: s.label, value: s.value }))
-  const colors = { 'Bull Case': '#16a34a', 'Base Case': '#1a3a5c', 'Worst Case': '#dc2626' }
+  const colors = { 'Bull Case': '#7cffcb', 'Base Case': '#4f8ef7', 'Worst Case': '#ff4d6d' }
 
   return (
     <ResponsiveContainer width="100%" height={200}>
       <BarChart data={data} margin={{ top: 10, right: 20, bottom: 0, left: 20 }}>
-        <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
-        <YAxis tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} tickFormatter={v => `$${v}`} width={50} />
+        <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#6b7599' }} axisLine={false} tickLine={false} />
+        <YAxis tick={{ fontSize: 11, fill: '#6b7599' }} axisLine={false} tickLine={false} tickFormatter={v => `$${v}`} width={50} />
         <Tooltip
           formatter={(val) => [`$${val.toFixed(2)}`, 'Fair Value']}
-          contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e2e8f0' }}
+          contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid rgba(255,255,255,0.07)', background: '#141d35', color: '#e8eaf0' }}
         />
         {currentPrice && (
           <ReferenceLine
@@ -108,7 +108,7 @@ function DCFChart({ scenarios, currentPrice }) {
         )}
         <Bar dataKey="value" radius={[4, 4, 0, 0]}>
           {data.map((entry, i) => (
-            <Cell key={i} fill={colors[entry.name] || '#1a3a5c'} />
+            <Cell key={i} fill={colors[entry.name] || '#4f8ef7'} />
           ))}
         </Bar>
       </BarChart>
@@ -170,23 +170,26 @@ function TickerSearch({ value, onChange, onSelect }) {
           }}
         />
         {loading && (
-          <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-slate-400" />
+          <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin" style={{ color: 'var(--text-muted)' }} />
         )}
       </div>
       {open && results.length > 0 && (
-        <div className="absolute top-full mt-1 w-full bg-white border border-border rounded-lg shadow-card-hover z-20 overflow-hidden">
+        <div className="absolute top-full mt-1 w-full rounded-xl z-20 overflow-hidden" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', boxShadow: '0 16px 48px rgba(0,0,0,0.5)' }}>
           {results.map((r, i) => (
             <button
               key={i}
-              className="flex items-center justify-between w-full px-3 py-2.5 text-left hover:bg-surface transition-colors border-b border-border/50 last:border-0"
+              className="flex items-center justify-between w-full px-3 py-2.5 text-left transition-colors"
+              style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(79,142,247,0.06)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               onClick={() => {
                 onSelect(r.symbol || r.ticker || r)
                 setOpen(false)
                 setResults([])
               }}
             >
-              <span className="font-mono font-semibold text-sm text-primary">{r.symbol || r.ticker}</span>
-              <span className="text-xs text-slate-500 max-w-[200px] truncate">{r.name || r.shortname}</span>
+              <span className="font-mono font-semibold text-sm" style={{ color: 'var(--primary)' }}>{r.symbol || r.ticker}</span>
+              <span className="text-xs max-w-[200px] truncate" style={{ color: 'var(--text-muted)' }}>{r.name || r.shortname}</span>
             </button>
           ))}
         </div>
@@ -276,14 +279,10 @@ export default function Analysis() {
   useEffect(() => {
     if (!report || !reportRef.current) return
     const ctx = gsap.context(() => {
-      gsap.from(reportRef.current.querySelectorAll('.card'), {
-        opacity: 0,
-        y: 36,
-        duration: 0.55,
-        stagger: 0.09,
-        ease: 'power2.out',
-        clearProps: 'all',
-      })
+      gsap.fromTo('.report-card',
+        { opacity: 0, y: 32 },
+        { opacity: 1, y: 0, stagger: 0.1, duration: 0.6, ease: 'power2.out', clearProps: 'all' }
+      )
     }, reportRef)
     return () => ctx.revert()
   }, [report])
@@ -404,16 +403,16 @@ export default function Analysis() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="mb-6">
-        <div className="flex items-center gap-2 text-xs text-slate-500 mb-2">
-          <Link to="/" className="hover:text-primary">Märkte</Link>
+        <div className="flex items-center gap-2 text-xs mb-2" style={{ color: 'var(--text-muted)' }}>
+          <Link to="/" className="hover:text-primary" style={{ color: 'var(--text-muted)' }}>Märkte</Link>
           <ChevronRight size={12} />
-          <span className="text-slate-700">Altair Analyse</span>
+          <span style={{ color: 'var(--text)' }}>Altair Analyse</span>
           {ticker && <><ChevronRight size={12} /><span className="text-primary font-mono font-medium">{ticker}</span></>}
         </div>
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Altair Deep-Dive</h1>
-            <p className="text-sm text-slate-500 mt-1">KI-gestützte Value-Analyse mit DCF, Conviction Score und Timing-Signal</p>
+            <h1 className="text-2xl font-bold" style={{ color: 'var(--text)', fontFamily: "'Boska', serif" }}>Altair Deep-Dive</h1>
+            <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>KI-gestützte Value-Analyse mit DCF, Conviction Score und Timing-Signal</p>
           </div>
           {report && (
             <button
@@ -438,7 +437,7 @@ export default function Analysis() {
                 onSelect={(sym) => { setTicker(sym); handleAnalyse(sym) }}
               />
               <div className="flex items-center gap-1.5 shrink-0">
-                <label className="flex items-center gap-1.5 cursor-pointer text-xs text-slate-500 whitespace-nowrap">
+                <label className="flex items-center gap-1.5 cursor-pointer text-xs whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>
                   <input
                     type="checkbox"
                     checked={forceRefresh}
@@ -463,23 +462,24 @@ export default function Analysis() {
             {loading && (
               <div className="mt-4 space-y-3">
                 {/* Active step — pulsing indicator */}
-                <div className="flex items-center gap-2 text-xs text-slate-600">
+                <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-muted)' }}>
                   <span className="relative flex h-2 w-2 shrink-0">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-60" />
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
                   </span>
-                  <span className="font-medium">{progressStep}</span>
+                  <span className="font-medium" style={{ color: 'var(--text)' }}>{progressStep}</span>
                 </div>
 
                 {/* Completed steps log */}
                 {progressLog.length > 0 && (
                   <div
                     ref={progressLogRef}
-                    className="bg-slate-50 border border-border rounded-lg p-3 space-y-1.5 max-h-44 overflow-y-auto"
+                    className="rounded-lg p-3 space-y-1.5 max-h-44 overflow-y-auto"
+                    style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
                   >
                     {progressLog.map((msg, i) => (
-                      <div key={i} className="progress-step flex items-start gap-2 text-xs text-slate-500">
-                        <CheckCircle size={11} className="text-emerald-500 mt-0.5 shrink-0" />
+                      <div key={i} className="progress-step flex items-start gap-2 text-xs" style={{ color: 'var(--text-muted)' }}>
+                        <CheckCircle size={11} className="text-primary mt-0.5 shrink-0" />
                         <span>{msg}</span>
                       </div>
                     ))}
@@ -487,7 +487,7 @@ export default function Analysis() {
                 )}
 
                 {/* Indeterminate progress bar */}
-                <div className="h-0.5 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-0.5 rounded-full overflow-hidden" style={{ background: 'var(--border)' }}>
                   <div
                     className="h-full bg-primary rounded-full"
                     style={{
@@ -513,8 +513,8 @@ export default function Analysis() {
               <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Brain size={24} className="text-primary" />
               </div>
-              <h3 className="text-base font-semibold text-slate-700 mb-2">Altair bereit</h3>
-              <p className="text-sm text-slate-500 max-w-md mx-auto">
+              <h3 className="text-base font-semibold mb-2" style={{ color: 'var(--text)' }}>Altair bereit</h3>
+              <p className="text-sm max-w-md mx-auto" style={{ color: 'var(--text-muted)' }}>
                 Gib einen Aktien-Ticker ein (z.B. <span className="font-mono font-medium">AAPL</span>,
                 <span className="font-mono font-medium"> VOW3.DE</span>,
                 <span className="font-mono font-medium"> NESN.SW</span>) und starte die KI-Analyse.
@@ -528,19 +528,19 @@ export default function Analysis() {
               {/* Price chart + Conviction */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Price chart */}
-                <div className="card md:col-span-2">
+                <div className="card report-card md:col-span-2">
                   <div className="card-header flex items-center justify-between">
-                    <h2 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                    <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: 'var(--text)' }}>
                       <BarChart2 size={14} />
                       Kursverlauf (12 Monate)
                     </h2>
-                    <span className="font-mono font-bold text-slate-800">{ticker}</span>
+                    <span className="font-mono font-bold" style={{ color: 'var(--text)' }}>{ticker}</span>
                   </div>
                   <div className="card-body">
                     {history.length > 0 ? (
                       <StockChart data={history} height={160} showArea />
                     ) : (
-                      <div className="flex items-center justify-center h-40 text-sm text-slate-400">
+                      <div className="flex items-center justify-center h-40 text-sm" style={{ color: 'var(--text-muted)' }}>
                         Kursdaten nicht verfügbar
                       </div>
                     )}
@@ -548,9 +548,9 @@ export default function Analysis() {
                 </div>
 
                 {/* Conviction gauge */}
-                <div className="card">
+                <div className="card report-card">
                   <div className="card-header">
-                    <h2 className="text-sm font-semibold text-slate-700">Conviction Score</h2>
+                    <h2 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Conviction Score</h2>
                   </div>
                   <div className="card-body flex flex-col items-center gap-3">
                     <ConvictionGauge score={sections.convictionScore ?? 0} size={150} />
@@ -563,9 +563,9 @@ export default function Analysis() {
 
               {/* Finanz-Snapshot */}
               {sections.snapshot && (
-                <div className="card">
+                <div className="card report-card">
                   <div className="card-header">
-                    <h2 className="text-sm font-semibold text-slate-700">Finanz-Snapshot & Peer-Check</h2>
+                    <h2 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Finanz-Snapshot & Peer-Check</h2>
                   </div>
                   <div className="card-body">
                     <SimpleTable markdown={sections.snapshot} />
@@ -575,9 +575,9 @@ export default function Analysis() {
 
               {/* DCF Chart */}
               {sections.scenarios?.length > 0 && (
-                <div className="card">
+                <div className="card report-card">
                   <div className="card-header">
-                    <h2 className="text-sm font-semibold text-slate-700">DCF Fair-Value Szenarien</h2>
+                    <h2 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>DCF Fair-Value Szenarien</h2>
                   </div>
                   <div className="card-body">
                     <DCFChart scenarios={sections.scenarios} currentPrice={sections.currentPrice} />
@@ -587,9 +587,9 @@ export default function Analysis() {
 
               {/* Valuation section */}
               {sections.valuation && (
-                <div className="card">
+                <div className="card report-card">
                   <div className="card-header">
-                    <h2 className="text-sm font-semibold text-slate-700">Bewertung & Szenarien</h2>
+                    <h2 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Bewertung & Szenarien</h2>
                   </div>
                   <div className="card-body">
                     <SimpleTable markdown={sections.valuation} />
@@ -599,9 +599,9 @@ export default function Analysis() {
 
               {/* Returns table */}
               {sections.returns && (
-                <div className="card">
+                <div className="card report-card">
                   <div className="card-header">
-                    <h2 className="text-sm font-semibold text-slate-700">Rendite-Erwartungen (3J / 5J)</h2>
+                    <h2 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Rendite-Erwartungen (3J / 5J)</h2>
                   </div>
                   <div className="card-body">
                     <SimpleTable markdown={sections.returns} />
@@ -611,9 +611,9 @@ export default function Analysis() {
 
               {/* Quality */}
               {sections.quality && (
-                <div className="card">
+                <div className="card report-card">
                   <div className="card-header">
-                    <h2 className="text-sm font-semibold text-slate-700">Qualität & Substanz</h2>
+                    <h2 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Qualität & Substanz</h2>
                   </div>
                   <div className="card-body">
                     <MarkdownSection content={sections.quality} />
@@ -623,10 +623,10 @@ export default function Analysis() {
 
               {/* Pre-mortem */}
               {sections.preMortem && (
-                <div className="card border-amber-200">
-                  <div className="card-header bg-amber-50 border-amber-200">
-                    <h2 className="text-sm font-semibold text-amber-800 flex items-center gap-2">
-                      <AlertTriangle size={14} className="text-amber-600" />
+                <div className="card report-card" style={{ borderColor: 'rgba(245,158,11,0.3)' }}>
+                  <div className="card-header" style={{ borderColor: 'rgba(245,158,11,0.2)', background: 'rgba(245,158,11,0.05)' }}>
+                    <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: '#f59e0b' }}>
+                      <AlertTriangle size={14} style={{ color: '#f59e0b' }} />
                       Pre-Mortem Stresstest
                     </h2>
                   </div>
@@ -638,9 +638,9 @@ export default function Analysis() {
 
               {/* Conclusion */}
               {sections.conclusion && (
-                <div className="card border-primary/20">
-                  <div className="card-header bg-primary/5 border-primary/20">
-                    <h2 className="text-sm font-semibold text-primary flex items-center gap-2">
+                <div className="card report-card" style={{ borderColor: 'rgba(79,142,247,0.2)' }}>
+                  <div className="card-header" style={{ borderColor: 'rgba(79,142,247,0.2)', background: 'rgba(79,142,247,0.05)' }}>
+                    <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: 'var(--primary)' }}>
                       <Shield size={14} />
                       Abschluss-Dashboard & Kapitalallokation
                     </h2>
@@ -653,12 +653,12 @@ export default function Analysis() {
 
               {/* Full text fallback if sections not parsed */}
               {!sections.snapshot && !sections.valuation && (
-                <div className="card">
+                <div className="card report-card">
                   <div className="card-header">
-                    <h2 className="text-sm font-semibold text-slate-700">Altair Analyse-Report</h2>
+                    <h2 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Altair Analyse-Report</h2>
                   </div>
                   <div className="card-body">
-                    <div className="markdown-content whitespace-pre-wrap text-sm text-slate-600 font-mono leading-relaxed">
+                    <div className="markdown-content whitespace-pre-wrap text-sm font-mono leading-relaxed" style={{ color: 'var(--text-muted)' }}>
                       {report?.result || report?.report || report?.text || JSON.stringify(report, null, 2)}
                     </div>
                   </div>
