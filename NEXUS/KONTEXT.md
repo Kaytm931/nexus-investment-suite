@@ -94,7 +94,7 @@ Ziel: Research-Qualität wie professionelle Analysten — kostenlos, BYOK (Bring
 | `components/ApiKeyGate.jsx` | ✅ | Blur-Overlay + Hinweis wenn kein API-Key gesetzt (`hasApiKey` aus AuthContext) |
 | `components/ConvictionGauge.jsx` | ✅ | SVG Arc Gauge 0–7, GSAP Counter + Arc-Animation, `useGSAP()` |
 | `components/StockChart.jsx` | ✅ | Recharts Area/Line Chart, dark-styled, Optional Area-Füllung |
-| `components/PerformanceChart.jsx` | ✅ | Portfolio vs. S&P 500 vs. MSCI World Linienchart. Fallback auf Demo-Daten |
+| `components/PerformanceChart.jsx` | ✅ | Portfolio vs. S&P 500 vs. MSCI World Linienchart. Dark Theme (2026-04-03). Demo-Daten Fallback mit Badge. |
 | ~~`components/MarketTicker.jsx`~~ | ❌ gelöscht | 2026-04-02 entfernt — zeigte nur Fallback-Daten, störte das Design |
 
 ---
@@ -202,18 +202,21 @@ WebSocket nur für Progress-Anzeige.
 - **Groq-Key unter "claude"-Slot gespeichert** — Backend-Kompatibilität, darf nicht geändert werden
 - **Kein localStorage** — Vercel Sandbox blockt es. Keys werden im Backend gespeichert
 - **yFinance Ratelimits** — Bei aggressivem Polling gibt yFinance `NaN` zurück
-- **Portfolio-Persistenz unklar** — SQLite (lokal) vs. Supabase (Cloud) je nach Deploy-Umgebung
+- **Portfolio-Persistenz auf Render** — `SUPABASE_URL` + `SUPABASE_SERVICE_KEY` in Render-Env-Vars setzen → Supabase aktiv. Ohne diese Vars: SQLite-Fallback (ephemeral, Daten weg nach Neustart)
 - **Bundle Size** — 1008 kB, Vite warnt. Kein funktionaler Bug
 
 ---
 
 ## Nächste Schritte
 
-1. `index.css` bereinigen — toten `ticker-scroll` Keyframe entfernen
-2. Error Boundaries in `App.jsx` einbauen (mind. für Analysis.jsx)
-3. "Passwort vergessen" Flow in Auth.jsx (Supabase `resetPasswordForEmail`)
-4. Bundle-Size: `vite.config.js` → `manualChunks` für GSAP + Recharts
-5. Portfolio-Persistenz auf Render klären (SQLite-Datei persistent mounten?)
+1. ~~`index.css` bereinigen~~ ✅ erledigt 2026-04-03
+2. ~~PerformanceChart Dark Theme~~ ✅ erledigt 2026-04-03
+3. Bundle-Size: `vite.config.js` → `manualChunks` für GSAP + Recharts
+4. Error Boundaries in `App.jsx` einbauen (mind. für Analysis.jsx)
+5. "Passwort vergessen" Flow in Auth.jsx (Supabase `resetPasswordForEmail`)
+6. Settings.jsx Key-Anzeige nach Reload (`gsk_****` Vorschau)
+7. Home.jsx MoverRow onMouseEnter → CSS-Klassen
+8. Analysis.jsx Regex-Parsing robuster machen
 
 ---
 

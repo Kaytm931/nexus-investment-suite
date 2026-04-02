@@ -1,18 +1,18 @@
 # NEXUS — Dashboard
 
-> Zuletzt aktualisiert: 2026-04-02 von Claude Code
+> Zuletzt aktualisiert: 2026-04-03 von Claude Code
 
 ---
 
 ## 🚦 Projektstatus
 
-**In Entwicklung — Phase 2 abgeschlossen. Dark Theme vollständig. Produktions-Deployment ausstehend.**
+**In Entwicklung — Bugfixes laufend. 3 von 9 Bugs behoben. Nächste Session: Bundle-Size, Error Boundaries, Auth-Erweiterungen.**
 
 ---
 
 ## Was gerade läuft
 
-Das Obsidian-Koordinationssystem wurde eingerichtet (`_project/`). Alle 6 Pages sind im Dark Theme fertig. Bekannte offene Punkte: Bundle-Size-Warnung, Portfolio-Persistenz auf Render, fehlende Error Boundaries und "Passwort vergessen"-Flow.
+Vault aufgebaut, erste Bugfix-Runde abgeschlossen. `index.css` bereinigt, `PerformanceChart.jsx` vollständig auf Dark Theme gebracht, Portfolio-Persistenz-Problem analysiert (nur Render-Env-Vars fehlen). Commit `1647445` gepusht. Pause bis nach Ostern.
 
 ---
 
@@ -40,7 +40,7 @@ Das Obsidian-Koordinationssystem wurde eingerichtet (`_project/`). Alle 6 Pages 
 | WebSocket Progress | ✅ | Echtzeit-Fortschritt bei Altair-Analysen |
 | Portfolio CRUD | ✅ | Positionen hinzufügen/bearbeiten/löschen |
 | Groq API Integration | ✅ | llama-3.3-70b-versatile als primäres Modell |
-| Obsidian Vault | ✅ | `_project/` aktiv seit 2026-04-02 |
+| Obsidian Vault | ✅ | `NEXUS/` aktiv seit 2026-04-03, `CLAUDE_CODE_FAEHIGKEITEN.md` im Vault-Root |
 | Error Boundaries | ❌ | Noch nicht implementiert |
 | "Passwort vergessen" | ❌ | Auth-Flow fehlt |
 
@@ -71,7 +71,7 @@ Das Obsidian-Koordinationssystem wurde eingerichtet (`_project/`). Alle 6 Pages 
 
 ## 💬 Offene Fragen / Unsicher
 
-- **Portfolio-Persistenz auf Render**: Werden Daten nach Render-Neustart verloren? (`backend/main.py` prüfen ob SQLite persistent ist)
+- **Portfolio-Persistenz auf Render**: ✅ Analysiert — `SUPABASE_URL` + `SUPABASE_SERVICE_KEY` in Render-Env-Vars eintragen, dann läuft Supabase statt SQLite
 - **Echte Live-Kurse**: yfinance Polling (60s) oder Finnhub WebSocket?
-- **Bundle-Size**: Vite warnt `1008 kB > 500 kB` — Code-Splitting via `manualChunks`?
+- **Bundle-Size**: Vite warnt `1008 kB > 500 kB` — Code-Splitting via `manualChunks` (Problem 4, nächste Session)
 - **Backend auf Render**: Läuft der Render-Service aktuell? URL bekannt?

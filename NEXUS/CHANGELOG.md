@@ -4,14 +4,34 @@
 
 ---
 
-## 2026-04-02 — Obsidian Koordinationssystem eingerichtet
+## 2026-04-03 — Bugfixes Phase 1 + Vault-Neuaufbau
+
+**Git-Commit:** `1647445`
 
 **Was wurde gemacht:**
-- `_project/` Vault-Ordner angelegt (ersetzt den früheren `NEXUS/` Vault)
-- Dateien angelegt: `START_HIER.md`, `DASHBOARD.md`, `KONTEXT.md`, `PROBLEME.md`, `ROADMAP.md`, `MUSTER.md`, `ENTSCHEIDUNGEN.md`, `CHANGELOG.md`
-- `verlauf/SESSION_2026-04-02.md` als erster Snapshot angelegt
-- Inhalte aus `NEXUS/` (Git-Commit `e04b326`) vollständig übernommen und erweitert
-- Git: Kein eigener Commit für die _project/ Dateien (noch nicht committed)
+
+Code-Fixes:
+- `frontend-react/src/index.css` — toten `ticker-scroll` Keyframe-Block entfernt (7 Zeilen, toter Code seit MarketTicker-Entfernung)
+- `frontend-react/src/components/PerformanceChart.jsx` — vollständig auf Dark Theme umgestellt: `bg-white`→CSS-Vars, `text-slate-*`→CSS-Vars, Chart-Farben (Portfolio `#7cffcb`, S&P `#6b7599`, MSCI `#4f8ef7`), Grid `rgba(255,255,255,0.05)`, Period-Selector dark, `badge-gray`→Inline-Style
+- `frontend-react/src/components/ApiKeyGate.jsx`, `ConvictionGauge.jsx`, `StockChart.jsx` — Dark Theme Fixes (aus vorheriger Session, jetzt committed)
+- `frontend-react/src/pages/Settings.jsx` — Dark Theme + Layout-Cleanup (aus vorheriger Session)
+
+Analyse (kein Code-Fix nötig):
+- Portfolio-Persistenz auf Render: Root Cause gefunden — `SUPABASE_URL` + `SUPABASE_SERVICE_KEY` in Render-Env-Vars eintragen → automatisch Supabase statt SQLite. Dokumentiert in KONTEXT.md.
+
+Vault:
+- `NEXUS/` vollständig neu aufgebaut: DASHBOARD.md + MUSTER.md neu, alle bestehenden Dateien aktualisiert, `verlauf/SESSION_2026-04-02.md` angelegt
+- `NEXUS/.obsidian/` aus git-Tracking entfernt + in `.gitignore` (Plugin `remotely-save/main.js` enthielt eingebettete Google OAuth Credentials → GitHub Push Protection hatte geblockt)
+- `CLAUDE_CODE_FAEHIGKEITEN.md` im Vault-Root angelegt (globale Capabilities-Übersicht)
+
+---
+
+## 2026-04-02 — Obsidian Koordinationssystem eingerichtet (Zwischenstand)
+
+**Was wurde gemacht:**
+- NEXUS/ Vault mit echtem Inhalt befüllt: START_HIER, KONTEXT, PROBLEME, CHANGELOG, ENTSCHEIDUNGEN, ROADMAP, API
+- Neue Dateien: DASHBOARD.md, MUSTER.md, verlauf/SESSION_2026-04-02.md
+- Alles in Commit `1647445` zusammengefasst
 
 ---
 
