@@ -402,7 +402,7 @@ export default function Analysis() {
     }
   }
 
-  const sections = report ? extractReportSections(report?.result || report?.report || report?.text || JSON.stringify(report)) : null
+  const sections = report ? extractReportSections(report?.raw_content || report?.result || report?.report || report?.text || '') : null
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

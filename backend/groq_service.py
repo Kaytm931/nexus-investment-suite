@@ -146,6 +146,15 @@ class GroqService:
         calc_count     = 0
         final_content  = ""
 
+        # Keep system + first user message fixed; trim middle to cap history size
+        def _trim_messages(msgs: list, keep_last_pairs: int = 3) -> list:
+            """Keep system(0) + first user(1) + last N assistant/user pairs."""
+            fixed = msgs[:2]
+            rest  = msgs[2:]
+            # each pair = assistant + user = 2 messages
+            max_tail = keep_last_pairs * 2
+            return fixed + rest[-max_tail:] if len(rest) > max_tail else msgs
+
         for round_num in range(1, max_rounds + 1):
 
             remaining = deadline - time.monotonic()
@@ -169,7 +178,7 @@ class GroqService:
 
             per_call_timeout = min(120.0, max(30.0, remaining - 10))
             result = await self._complete(
-                messages,
+                _trim_messages(messages),
                 progress_callback,
                 progress_prefix=f"Schritt {round_num}",
                 timeout=per_call_timeout,
