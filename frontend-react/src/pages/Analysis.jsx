@@ -217,9 +217,6 @@ function extractReportSections(text) {
 
   // Extract DCF scenarios
   const scenarios = []
-  const dcfPattern = /(?:Bull|Base|Worst|Bear)\s*Case[^\|]*\|[^\|]*\|\s*\$?([\d,.]+)/gi
-  let m
-  const labels = []
   const dcfText = text.match(/(Bull Case|Base Case|Worst Case|Bear Case)[^\n]+/gi) || []
   dcfText.forEach(line => {
     const label = line.match(/Bull Case|Base Case|Worst Case|Bear Case/i)?.[0]
@@ -230,22 +227,30 @@ function extractReportSections(text) {
   })
   if (scenarios.length) sections.scenarios = scenarios
 
+  // Normalize heading styles → all become ## so one split handles everything:
+  // ###+ headings → ##
+  // **Bold heading** or **Bold heading:** alone on a line → ##
+  const normalized = text
+    .replace(/^#{3,} /gm, '## ')
+    .replace(/^\*{1,2}([^*\n]{3,})\*{1,2}:?\s*$/gm, '## $1')
+
   // Split into major sections by ## headings
-  const sectionMatches = text.split(/(?=^## )/m)
+  const sectionMatches = normalized.split(/(?=^## )/m)
   sectionMatches.forEach(chunk => {
-    const title = chunk.match(/^## (.+)/m)?.[1] || ''
+    const title = (chunk.match(/^## (.+)/m)?.[1] || '').trim().toLowerCase()
     const content = chunk.replace(/^## [^\n]+\n/, '').trim()
-    if (title.toLowerCase().includes('snapshot') || title.toLowerCase().includes('finanz')) {
+    if (!content) return
+    if (/snapshot|finanz|peer|kenn/.test(title)) {
       sections.snapshot = content
-    } else if (title.toLowerCase().includes('qualität') || title.toLowerCase().includes('substanz')) {
+    } else if (/qualit|substanz|moat|wettbewerb/.test(title)) {
       sections.quality = content
-    } else if (title.toLowerCase().includes('bewertung') || title.toLowerCase().includes('szenario')) {
+    } else if (/bewert|szenario|dcf|valuat|fair.?value/.test(title)) {
       sections.valuation = content
-    } else if (title.toLowerCase().includes('pre-mortem') || title.toLowerCase().includes('stresstest')) {
+    } else if (/pre.?mortem|stresstest|risiko|risk/.test(title)) {
       sections.preMortem = content
-    } else if (title.toLowerCase().includes('fazit') || title.toLowerCase().includes('modul 4') || title.toLowerCase().includes('kapital')) {
+    } else if (/fazit|kapital|allokation|conclusion|dashboard|modul 4/.test(title)) {
       sections.conclusion = content
-    } else if (title.toLowerCase().includes('rendite')) {
+    } else if (/rendite|return|ertrags/.test(title)) {
       sections.returns = content
     }
   })
@@ -668,13 +673,19 @@ export default function Analysis() {
               {/* Full text fallback if sections not parsed */}
               {!sections.snapshot && !sections.valuation && (
                 <div className="card report-card">
-                  <div className="card-header">
+                  <div className="card-header flex items-center justify-between">
                     <h2 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Altair Analyse-Report</h2>
+                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Volltext</span>
                   </div>
                   <div className="card-body">
-                    <div className="markdown-content whitespace-pre-wrap text-sm font-mono leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-                      {report?.result || report?.report || report?.text || JSON.stringify(report, null, 2)}
+                    <div
+                      className="flex items-start gap-2 px-3 py-2.5 rounded-lg mb-4 text-xs"
+                      style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', color: '#f59e0b' }}
+                    >
+                      <AlertTriangle size={13} className="shrink-0 mt-0.5" />
+                      <span>Bericht-Struktur konnte nicht automatisch erkannt werden — Volltext wird angezeigt.</span>
                     </div>
+                    <MarkdownSection content={report?.result || report?.report || report?.text || JSON.stringify(report, null, 2)} />
                   </div>
                 </div>
               )}

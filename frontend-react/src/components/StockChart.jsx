@@ -4,9 +4,26 @@ import {
   Tooltip, ResponsiveContainer
 } from 'recharts'
 
+function formatDate(val) {
+  if (!val && val !== 0) return ''
+  // Unix ms timestamp
+  if (typeof val === 'number' && val > 1e10) {
+    return new Date(val).toLocaleDateString('de-DE', { day: '2-digit', month: 'short' })
+  }
+  // ISO string or datetime string
+  if (typeof val === 'string') {
+    const d = new Date(val)
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleDateString('de-DE', { day: '2-digit', month: 'short' })
+    }
+  }
+  return '' // raw index or unknown → hide
+}
+
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
   const value = payload[0]?.value
+  const dateLabel = formatDate(label) || label
   return (
     <div
       className="rounded-xl px-3 py-2"
@@ -16,7 +33,7 @@ function CustomTooltip({ active, payload, label }) {
         boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
       }}
     >
-      <p className="text-xs mb-0.5" style={{ color: 'var(--text-muted)' }}>{label}</p>
+      <p className="text-xs mb-0.5" style={{ color: 'var(--text-muted)' }}>{dateLabel}</p>
       <p className="text-sm font-mono font-medium" style={{ color: 'var(--text)' }}>
         {value?.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </p>
@@ -75,6 +92,8 @@ export default function StockChart({
             tickLine={false}
             axisLine={false}
             interval="preserveStartEnd"
+            tickFormatter={formatDate}
+            minTickGap={40}
           />
         )}
         <YAxis

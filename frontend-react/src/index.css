@@ -288,6 +288,18 @@
   animation: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
 
+/* ── Hero visual scan line ───────────────────────────────────────────────────── */
+@keyframes scanline {
+  0%   { top: 12%; opacity: 0; }
+  8%   { opacity: 1; }
+  92%  { opacity: 1; }
+  100% { top: 88%; opacity: 0; }
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* ── Markdown content ───────────────────────────────────────────────────────── */
 .markdown-content table { @apply w-full text-sm border-collapse; }
 .markdown-content th {

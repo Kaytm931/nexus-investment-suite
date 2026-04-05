@@ -158,7 +158,126 @@ function MoverRow({ item, isGainer }) {
   )
 }
 
-// ─── Demo Ticker (Elara card animation) ────────────────────────────────────────
+// ─── Hero Visual (right column) ───────────────────────────────────────────────
+function HeroVisual() {
+  const METRICS = [
+    { label: 'Conviction Score', value: '6.2 / 7', color: 'var(--accent)' },
+    { label: 'DCF Fair Value',   value: '$218.40',  color: 'var(--text)' },
+    { label: 'Upside Potenzial', value: '+24.3 %',  color: 'var(--accent)' },
+    { label: 'Pre-Mortem Risk',  value: 'Mittel',   color: '#f59e0b' },
+    { label: 'Timing-Signal',    value: 'Jetzt kaufen', color: 'var(--accent)' },
+  ]
+  const path = 'M0,55 C20,50 35,52 50,38 C65,24 75,30 90,20 C105,10 118,14 132,9 C146,4 158,6 172,3 C186,0 200,2 220,1 L240,0'
+  return (
+    <div className="hero-visual relative hidden lg:block select-none">
+      {/* Floating badge top-right */}
+      <div
+        className="absolute -top-3 -right-3 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold"
+        style={{
+          background: 'rgba(124,255,203,0.12)',
+          border: '1px solid rgba(124,255,203,0.3)',
+          color: 'var(--accent)',
+          backdropFilter: 'blur(10px)',
+          animation: 'fadeInUp 0.6s 1.2s ease both',
+        }}
+      >
+        <span>▲ +24.3%</span>
+        <span style={{ color: 'rgba(124,255,203,0.5)' }}>12M</span>
+      </div>
+
+      {/* Floating badge bottom-left */}
+      <div
+        className="absolute -bottom-3 -left-3 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono"
+        style={{
+          background: 'rgba(79,142,247,0.1)',
+          border: '1px solid rgba(79,142,247,0.25)',
+          color: 'var(--primary)',
+          backdropFilter: 'blur(10px)',
+          animation: 'fadeInUp 0.6s 1.4s ease both',
+        }}
+      >
+        DCF Fair Value: $218
+      </div>
+
+      {/* Main card */}
+      <div
+        className="rounded-2xl overflow-hidden"
+        style={{
+          background: 'var(--surface-2)',
+          border: '1px solid rgba(79,142,247,0.15)',
+          boxShadow: '0 0 80px rgba(79,142,247,0.07), 0 0 0 1px rgba(255,255,255,0.03)',
+        }}
+      >
+        {/* Card header */}
+        <div
+          className="px-5 py-3.5 flex items-center justify-between"
+          style={{ borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.02)' }}
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold font-mono"
+              style={{ background: 'rgba(79,142,247,0.12)', color: 'var(--primary)', border: '1px solid rgba(79,142,247,0.2)' }}
+            >
+              AAPL
+            </div>
+            <div>
+              <p className="text-xs font-semibold" style={{ color: 'var(--text)' }}>Apple Inc.</p>
+              <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>NASDAQ · Tech</p>
+            </div>
+          </div>
+          <span
+            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold"
+            style={{ background: 'rgba(124,255,203,0.12)', color: 'var(--accent)', border: '1px solid rgba(124,255,203,0.25)' }}
+          >
+            ✓ KAUFEN
+          </span>
+        </div>
+
+        {/* SVG chart */}
+        <div className="relative px-5 pt-5 pb-2">
+          <svg viewBox="0 0 240 62" className="w-full" style={{ height: 62, overflow: 'visible' }}>
+            <defs>
+              <linearGradient id="hg" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#4f8ef7" stopOpacity="0.25" />
+                <stop offset="100%" stopColor="#4f8ef7" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            <path d={`${path} L240,62 L0,62 Z`} fill="url(#hg)" />
+            <path d={path} fill="none" stroke="#4f8ef7" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            {/* Endpoint dot */}
+            <circle cx="240" cy="0" r="3" fill="var(--accent)" style={{ filter: 'drop-shadow(0 0 4px var(--accent))' }} />
+          </svg>
+        </div>
+
+        {/* Metrics */}
+        <div className="px-5 pb-4 space-y-2.5">
+          {METRICS.map(({ label, value, color }, i) => (
+            <div
+              key={label}
+              className="flex items-center justify-between"
+              style={{ animation: `fadeInUp 0.4s ${0.9 + i * 0.07}s ease both` }}
+            >
+              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{label}</span>
+              <span className="text-xs font-mono font-semibold tabular" style={{ color }}>{value}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Scan line */}
+        <div
+          className="absolute left-0 right-0 h-px pointer-events-none"
+          style={{
+            background: 'linear-gradient(90deg, transparent 0%, rgba(79,142,247,0.5) 50%, transparent 100%)',
+            animation: 'scanline 4s ease-in-out infinite',
+            top: '12%',
+          }}
+        />
+      </div>
+    </div>
+  )
+}
+
+// ─── Demo Ticker (Elara card animation) ──────────────────────────────────────��─
 const DEMO_TICKERS = ['MSFT', 'NVDA', 'ASML', 'SAP', 'GOOGL', 'META', 'BRK', 'TSLA', 'AMZN', 'AAPL']
 
 function ElaraDemoTicker() {
@@ -303,6 +422,7 @@ export default function Home() {
         .from('.hero-sub',  { opacity: 0, y: 24, duration: 0.6 }, '-=0.35')
         .from('.hero-cta',  { opacity: 0, y: 20, duration: 0.5, stagger: 0.1 }, '-=0.3')
         .from('.hero-stat', { opacity: 0, scale: 0.85, duration: 0.5, stagger: 0.08, ease: 'back.out(1.4)' }, '-=0.25')
+        .from('.hero-visual', { opacity: 0, x: 40, duration: 0.9, ease: 'power2.out' }, '-=0.7')
     }, heroRef)
     return () => ctx.revert()
   }, [])
@@ -399,6 +519,8 @@ export default function Home() {
         />
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32 w-full">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+          <div>
           {/* KI Badge */}
           <div
             className="hero-badge inline-flex items-center gap-2.5 px-4 py-2 rounded-full text-xs font-medium mb-10"
@@ -535,6 +657,12 @@ export default function Home() {
               </div>
             ))}
           </div>
+          </div>{/* end left col */}
+
+          {/* Right column — Analysis Visual */}
+          <HeroVisual />
+
+          </div>{/* end grid */}
         </div>
       </section>
 

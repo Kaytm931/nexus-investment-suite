@@ -164,16 +164,6 @@ export default function Screener() {
   const { hasApiKey } = useAuth()
   const navigate = useNavigate()
 
-  // GSAP row stagger when results arrive
-  useEffect(() => {
-    if (result) {
-      gsap.fromTo('.screener-row',
-        { opacity: 0, x: -16 },
-        { opacity: 1, x: 0, stagger: 0.04, duration: 0.35, ease: 'power2.out' }
-      )
-    }
-  }, [result])
-
   const [form, setForm] = useState({
     sector: 'Technology',
     market_cap: '',
@@ -186,6 +176,16 @@ export default function Screener() {
   const [error, setError] = useState('')
   const [result, setResult] = useState(null)
   const progressRef = useRef(null)
+
+  // GSAP row stagger when results arrive
+  useEffect(() => {
+    if (result) {
+      gsap.fromTo('.screener-row',
+        { opacity: 0, x: -16 },
+        { opacity: 1, x: 0, stagger: 0.04, duration: 0.35, ease: 'power2.out' }
+      )
+    }
+  }, [result])
 
   const handleChange = (field, value) => {
     setForm(f => ({ ...f, [field]: value }))
