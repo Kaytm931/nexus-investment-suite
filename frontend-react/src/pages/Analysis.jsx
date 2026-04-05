@@ -15,21 +15,36 @@ import {
   BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine
 } from 'recharts'
 
+// ─── Inline markdown renderer ────────────────────────────────────────────────
+function renderInline(text) {
+  const parts = []
+  const re = /\*\*([^*\n]+)\*\*|\*([^*\n]+)\*/g
+  let last = 0
+  let m
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) parts.push(text.slice(last, m.index))
+    if (m[1]) parts.push(<strong key={m.index} style={{ color: 'var(--text)', fontWeight: 600 }}>{m[1]}</strong>)
+    else if (m[2]) parts.push(<em key={m.index}>{m[2]}</em>)
+    last = re.lastIndex
+  }
+  if (last < text.length) parts.push(text.slice(last))
+  return parts
+}
+
 // ─── Markdown renderer (simple) ──────────────────────────────────────────────
 function MarkdownSection({ content, className = '' }) {
   if (!content) return null
-  // Convert basic markdown to HTML-like display
   const lines = content.split('\n')
   return (
     <div className={`space-y-2 text-sm leading-relaxed ${className}`} style={{ color: 'var(--text-muted)' }}>
       {lines.map((line, i) => {
-        if (line.startsWith('## ')) return <h2 key={i} className="text-base font-semibold mt-4 mb-2 pb-1.5" style={{ color: 'var(--text)', borderBottom: '1px solid var(--border)', fontFamily: "'Boska', serif" }}>{line.replace('## ', '')}</h2>
-        if (line.startsWith('### ')) return <h3 key={i} className="text-sm font-semibold mt-3 mb-1.5" style={{ color: 'var(--text)' }}>{line.replace('### ', '')}</h3>
-        if (line.startsWith('- ') || line.startsWith('• ')) return <p key={i} className="flex gap-2"><span className="mt-0.5" style={{ color: 'var(--primary)' }}>•</span><span>{line.replace(/^[-•] /, '')}</span></p>
-        if (line.startsWith('| ')) return null // tables handled separately
-        if (line.match(/^\d+\./)) return <p key={i} className="pl-2">{line}</p>
+        if (line.startsWith('## ')) return <h2 key={i} className="text-base font-semibold mt-4 mb-2 pb-1.5" style={{ color: 'var(--text)', borderBottom: '1px solid var(--border)', fontFamily: "'Boska', serif" }}>{renderInline(line.replace('## ', ''))}</h2>
+        if (line.startsWith('### ')) return <h3 key={i} className="text-sm font-semibold mt-3 mb-1.5" style={{ color: 'var(--text)' }}>{renderInline(line.replace('### ', ''))}</h3>
+        if (line.startsWith('- ') || line.startsWith('• ')) return <p key={i} className="flex gap-2"><span className="mt-0.5 shrink-0" style={{ color: 'var(--primary)' }}>•</span><span>{renderInline(line.replace(/^[-•] /, ''))}</span></p>
+        if (line.startsWith('| ')) return null // tables rendered by SimpleTable
+        if (line.match(/^\d+\./)) return <p key={i} className="pl-2">{renderInline(line)}</p>
         if (line.trim() === '') return null
-        return <p key={i}>{line}</p>
+        return <p key={i}>{renderInline(line)}</p>
       })}
     </div>
   )
@@ -49,18 +64,18 @@ function parseMarkdownTable(text) {
 
 function SimpleTable({ markdown }) {
   const parsed = parseMarkdownTable(markdown)
-  if (!parsed) return <p className="text-sm italic" style={{ color: 'var(--text-muted)' }}>{markdown}</p>
+  if (!parsed) return <MarkdownSection content={markdown} />
   return (
     <div className="table-container">
       <table className="data-table">
         <thead>
-          <tr>{parsed.headers.map((h, i) => <th key={i}>{h}</th>)}</tr>
+          <tr>{parsed.headers.map((h, i) => <th key={i}>{renderInline(h)}</th>)}</tr>
         </thead>
         <tbody>
           {parsed.rows.map((row, ri) => (
             <tr key={ri}>
               {row.map((cell, ci) => (
-                <td key={ci} className={ci > 0 ? 'num' : ''}>{cell}</td>
+                <td key={ci} className={ci > 0 ? 'num' : ''}>{renderInline(cell)}</td>
               ))}
             </tr>
           ))}
@@ -249,7 +264,7 @@ function extractReportSections(text) {
     } else if (/pre.?mortem|stresstest|risiko|risk/.test(title)) {
       sections.preMortem = content
     } else if (/fazit|kapital|allokation|conclusion|dashboard|modul 4/.test(title)) {
-      sections.conclusion = content
+      if (!sections.conclusion) sections.conclusion = content  // first match wins — avoids duplication
     } else if (/rendite|return|ertrags/.test(title)) {
       sections.returns = content
     }
@@ -670,6 +685,30 @@ export default function Analysis() {
                 </div>
               )}
 
+              {/* Sources */}
+              {report?.sources?.length > 0 && (
+                <div className="card report-card">
+                  <div className="card-header">
+                    <h2 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Quellen</h2>
+                  </div>
+                  <div className="card-body">
+                    <ul className="space-y-1.5">
+                      {report.sources.map((src, i) => {
+                        const url = typeof src === 'string' ? src : src?.url
+                        const label = typeof src === 'string' ? src : (src?.title || src?.url)
+                        if (!url) return null
+                        return (
+                          <li key={i} className="flex items-start gap-2 text-xs" style={{ color: 'var(--text-muted)' }}>
+                            <span className="shrink-0 mt-0.5" style={{ color: 'var(--primary)' }}>↗</span>
+                            <a href={url} target="_blank" rel="noopener noreferrer" className="hover:underline truncate" style={{ color: 'var(--primary)' }}>{label}</a>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </div>
+                </div>
+              )}
+
               {/* Full text fallback if sections not parsed */}
               {!sections.snapshot && !sections.valuation && (
                 <div className="card report-card">
@@ -685,7 +724,7 @@ export default function Analysis() {
                       <AlertTriangle size={13} className="shrink-0 mt-0.5" />
                       <span>Bericht-Struktur konnte nicht automatisch erkannt werden — Volltext wird angezeigt.</span>
                     </div>
-                    <MarkdownSection content={report?.result || report?.report || report?.text || JSON.stringify(report, null, 2)} />
+                    <MarkdownSection content={report?.raw_content || report?.result || report?.report || report?.text || JSON.stringify(report, null, 2)} />
                   </div>
                 </div>
               )}

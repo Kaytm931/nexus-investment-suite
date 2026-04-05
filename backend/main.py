@@ -150,6 +150,7 @@ PHASE 1 — METHODIK-RECHERCHE (max. 2 Recherchen, nur Aktien)
 Sektorabhängige Methoden:
   Tech/SaaS: EV/Revenue, Rule of 40, FCF-Marge, NTM-Multiples
   Banken: KBV, RoE, NIM, CET1 — KEIN DCF
+  Asset Manager: KBV, AUM-Wachstum, Fee-Marge, Cost-Income-Ratio — KEIN DCF
   REITs: FFO-Multiple, NAV-Abschlag, LTV — KEIN KGV
   Energie: EV/EBITDA, Reserve-Leben, Lifting-Kosten
   Pharma: rNPV, EV/Sales, SOTP
@@ -169,15 +170,22 @@ NIEMALS Zahlen erfinden — immer ```calculate verwenden.
 PHASE 3 — ALTAIR-REPORT
 Sections: ## 1. Finanz-Snapshot & Peer-Check | ## 2. Qualität & Substanz | ## 3. Bewertung & Szenarien (Base/Worst/Bull mit Fair Value + Margin of Safety) | ## 4. Pre-Mortem Stresstest (2030, -70%) | ## 5. Fazit
 
+## 1. Finanz-Snapshot & Peer-Check
+PFLICHT: Nenne GENAU 2 direkte Peers mit Name + Ticker (z.B. "Apple (AAPL)"). Format: Markdown-Tabelle mit Kennzahlen.
+
+## 4. Pre-Mortem Stresstest (2030, -70%)
+PFLICHT: Beschreibe EINE spezifische, unternehmensrelevante Ursache (z.B. konkreter Wettbewerber, Regulierungsrisiko, Technologieshift). KEIN allgemeiner "Marktabschwung" oder "Rezession" als einzige Ursache erlaubt.
+
 MODUL 4 — KAPITALALLOKATION
 
-Conviction Score (0-7):
-+2 MoS >30%, +1 MoS 15-30%, +2 Wide Moat, +1 Mod. Moat, +1 kein Kill-Szenario, -1 starkes Kill-Szenario, +1 Insider-Käufe netto, -1 ND/EBITDA >3
+Conviction Score (0-7) — PFLICHT: Zeige für jedes Kriterium den zugeteilten Punkt, z.B.:
++2 MoS >30% ✓ | +2 Wide Moat ✓ | +1 kein Kill-Szenario ✓ | +1 Insider-Käufe ✗ | -1 ND/EBITDA >3 ✗ → Gesamt: X/7
+Kriterien: +2 MoS >30%, +1 MoS 15-30%, +2 Wide Moat, +1 Mod. Moat, +1 kein Kill-Szenario, -1 starkes Kill-Szenario, +1 Insider-Käufe netto, -1 ND/EBITDA >3
 6-7→8-12% | 4-5→4-7% | 2-3→1-3% | 0-1→Nicht kaufen
 
 Timing-Signal: >20% unter FV→🟢 JETZT KAUFEN | 5-20%→🟡 WARTE | nahe/über FV→🔴 WATCHLIST
 
-Rendite-Tabelle (Base/Worst/Bull): Fair Value | Kaufkurs | Rendite 3J | 5J | p.a.
+Rendite-Tabelle (Markdown-Tabelle PFLICHT): | Szenario | Fair Value | Kaufkurs | Rendite 3J | Rendite 5J | p.a. |
 Alpha-Check: Base p.a. vs. S&P 500 (~10%) / MSCI World (~8%).
 
 Abschluss-Dashboard: Conviction [X/7], Positionsgröße, Timing-Signal, Rendite 3J/5J/p.a., Alpha.

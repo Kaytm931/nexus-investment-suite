@@ -4,6 +4,18 @@
 
 ---
 
+## ⚠️ Pflicht-Regel für Claude: Commit & Push nach jeder Session
+
+Nach **jedem abgeschlossenen Workflow** (egal ob Bugfix, Feature, Refactor) gilt zwingend:
+
+1. `git add` — nur die tatsächlich geänderten Dateien (keine `.claude/`, `.env`, Binaries)
+2. `git commit -m "..."` — aussagekräftige Commit-Message mit kurzer Beschreibung aller Änderungen
+3. `git push` — auf `origin/main`
+
+Ohne Push ist die Session **nicht abgeschlossen**. Der Schritt kommt immer ganz am Ende, nach dem Build-Check und nach dem Eintrag in PROBLEME.md.
+
+---
+
 ## Was ist NEXUS?
 
 NEXUS ist eine **institutionelle Investment-Analyse-WebApp** für Privatanleger.
