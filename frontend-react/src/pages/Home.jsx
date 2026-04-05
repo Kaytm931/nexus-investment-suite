@@ -484,8 +484,8 @@ export default function Home() {
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
       <section
         ref={heroRef}
-        className="relative overflow-hidden min-h-[92vh] flex items-center"
-        style={{ background: 'var(--bg)' }}
+        className="relative overflow-hidden flex items-center"
+        style={{ background: 'var(--bg)', minHeight: 'calc(100dvh - 4rem)' }}
       >
         {/* Dot grid */}
         <div
@@ -518,12 +518,12 @@ export default function Home() {
           }}
         />
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32 w-full">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 w-full">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           <div>
           {/* KI Badge */}
           <div
-            className="hero-badge inline-flex items-center gap-2.5 px-4 py-2 rounded-full text-xs font-medium mb-10"
+            className="hero-badge inline-flex items-center gap-2.5 px-4 py-2 rounded-full text-xs font-medium mb-6"
             style={{
               background: 'rgba(255,255,255,0.04)',
               border: '1px solid rgba(255,255,255,0.1)',
@@ -545,13 +545,13 @@ export default function Home() {
           </div>
 
           {/* Headline */}
-          <div className="max-w-4xl mb-8">
+          <div className="max-w-4xl mb-5">
             <h1
               className="leading-none tracking-tight"
               style={{
                 fontFamily: "'Boska', Georgia, serif",
                 fontWeight: 900,
-                fontSize: 'clamp(3rem, 8vw, 7rem)',
+                fontSize: 'clamp(2.6rem, 6.5vw, 5.5rem)',
               }}
             >
               <span className="hero-line block" style={{ color: 'var(--text)' }}>Institutionelle</span>
@@ -561,7 +561,7 @@ export default function Home() {
           </div>
 
           <p
-            className="hero-sub text-base sm:text-lg max-w-xl mb-12 leading-relaxed"
+            className="hero-sub text-base sm:text-lg max-w-xl mb-7 leading-relaxed"
             style={{ color: 'rgba(232,234,240,0.55)' }}
           >
             <strong style={{ color: 'var(--text)', fontWeight: 600 }}>Elara</strong> screent Sektoren quantamental.{' '}
@@ -570,7 +570,7 @@ export default function Home() {
           </p>
 
           {/* CTAs */}
-          <div className="flex flex-wrap gap-3 mb-20">
+          <div className="flex flex-wrap gap-3 mb-10">
             {user ? (
               <>
                 <Link
