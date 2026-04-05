@@ -83,7 +83,11 @@ function IndexCard({ index, fetchedAt }) {
       </div>
 
       {index.spark?.length > 0 ? (
-        <StockChart data={index.spark} color={positive ? '#7cffcb' : '#ff4d6d'} height={52} minimal showArea />
+        <StockChart
+          data={index.spark.map((v, i) => ({ date: i, value: v }))}
+          color={positive ? '#7cffcb' : '#ff4d6d'}
+          height={52} minimal showArea
+        />
       ) : (
         <div className="h-12 flex items-center justify-center">
           <span className="text-xs" style={{ color: 'rgba(107,117,153,0.5)' }}>Keine Verlaufsdaten</span>
@@ -308,13 +312,13 @@ export default function Home() {
   // Market cards stagger
   useEffect(() => {
     if (loading) return
-    const ctx = gsap.context(() => {
-      gsap.from('.index-card', {
-        opacity: 0, y: 32, duration: 0.55, stagger: 0.1, ease: 'power2.out',
-      })
-    }, marketRef)
-    return () => ctx.revert()
-  }, [loading])
+    const cards = marketRef.current?.querySelectorAll('.index-card')
+    if (!cards?.length) return
+    gsap.fromTo(cards,
+      { opacity: 0, y: 32 },
+      { opacity: 1, y: 0, duration: 0.55, stagger: 0.1, ease: 'power2.out' }
+    )
+  }, [loading, indices.length])
 
   // ScrollTrigger: feature cards
   useLayoutEffect(() => {

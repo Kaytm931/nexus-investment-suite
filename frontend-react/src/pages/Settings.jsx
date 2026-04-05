@@ -168,11 +168,6 @@ function ProviderPill({ active, label, model }) {
 export default function Settings() {
   const { user, signOut, refreshKeyStatus } = useAuth()
 
-  const [groqKey,    setGroqKey]    = useState('')
-  const [groqSaving, setGroqSaving] = useState(false)
-  const [groqStatus, setGroqStatus] = useState(null)
-  const [groqMsg,    setGroqMsg]    = useState('')
-
   const [claudeKey,    setClaudeKey]    = useState('')
   const [claudeSaving, setClaudeSaving] = useState(false)
   const [claudeStatus, setClaudeStatus] = useState(null)
@@ -206,7 +201,7 @@ export default function Settings() {
       setBackendOk(ok)
       try {
         const status = await getKeyStatus()
-        if (status?.claude)       { setGroqStatus(true); setClaudeStatus(true) }
+        if (status?.claude)       { setClaudeStatus(true) }
         if (status?.alphavantage) setAvStatus(true)
         if (status?.tavily)       setTavStatus(true)
         if (status?.openai)       setOpenaiStatus(true)
@@ -215,25 +210,6 @@ export default function Settings() {
     }
     init()
   }, [])
-
-  const handleGroqTest = async () => {
-    if (!groqKey.trim()) return
-    setGroqSaving(true); setGroqMsg('')
-    try {
-      await testApiKey('claude', groqKey.trim())
-      setGroqMsg('Key gültig.'); setGroqStatus(true)
-    } catch (e) { setGroqMsg(`Fehler: ${e.message}`); setGroqStatus(false) }
-    finally { setGroqSaving(false) }
-  }
-  const handleGroqSave = async () => {
-    if (!groqKey.trim()) return
-    setGroqSaving(true); setGroqMsg('')
-    try {
-      await saveApiKey('claude', groqKey.trim())
-      setGroqMsg('Gespeichert.'); setGroqStatus(true); refreshKeyStatus()
-    } catch (e) { setGroqMsg(`Fehler: ${e.message}`) }
-    finally { setGroqSaving(false) }
-  }
 
   const handleClaudeTest = async () => {
     if (!claudeKey.trim()) return
@@ -377,29 +353,6 @@ export default function Settings() {
             </span>
           </p>
         </div>
-        <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-          Optional: Eigenen Groq-Key hinterlegen, um Rate-Limits des Shared-Keys zu umgehen.
-        </p>
-        <div>
-          <label className="label">Eigener Groq API-Key (optional)</label>
-          <SecretInput value={groqKey} onChange={setGroqKey} placeholder="gsk_..." disabled={groqSaving} />
-        </div>
-        {groqMsg && <p className="text-xs" style={{ color: groqStatus ? 'var(--success)' : 'var(--danger)' }}>{groqMsg}</p>}
-        <div className="flex gap-2">
-          <button className="btn-secondary text-xs" onClick={handleGroqTest} disabled={groqSaving || !groqKey.trim()}>
-            {groqSaving && <Loader2 size={13} className="animate-spin" />} Testen
-          </button>
-          <button className="btn-primary text-xs" onClick={handleGroqSave} disabled={groqSaving || !groqKey.trim()}>
-            {groqSaving && <Loader2 size={13} className="animate-spin" />} Speichern
-          </button>
-        </div>
-        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-          Key holen:{' '}
-          <a href="https://console.groq.com" target="_blank" rel="noopener noreferrer" style={linkStyle} className="hover:underline">
-            console.groq.com
-          </a>
-          {' '}— Kostenloser Tarif verfügbar.
-        </p>
       </Section>
 
       {/* Claude */}
