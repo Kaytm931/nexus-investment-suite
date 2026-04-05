@@ -22,7 +22,7 @@ class SearchService:
         if self._client:
             await self._client.aclose()
 
-    async def search(self, query: str, max_results: int = 5) -> dict:
+    async def search(self, query: str, max_results: int = 5, search_depth: str = "advanced") -> dict:
         """
         Execute a Tavily search. Returns:
         {
@@ -38,7 +38,7 @@ class SearchService:
             resp = await self._client.post(TAVILY_API_URL, json={
                 "api_key": self.api_key,
                 "query": query,
-                "search_depth": "advanced",
+                "search_depth": search_depth,
                 "include_answer": True,
                 "include_raw_content": False,
                 "max_results": max_results,
@@ -83,30 +83,27 @@ class SearchService:
 
         return {"context": "\n\n".join(all_results), "sources": all_sources}
 
-    async def gather_ticker_qualitative(self, ticker: str) -> dict:
+    async def gather_ticker_qualitative(self, ticker: str, company_name: str = "") -> dict:
         """
-        For Altair: only qualitative data — insider activity, news, moat, risks.
-        Quantitative data comes from yfinance (no tokens wasted on numbers).
-        2 searches instead of 6 = ~65% weniger Token.
+        For Altair: qualitative data — insider activity, moat, risks.
+        Uses company_name to avoid ticker-confusion (e.g. ORC.DE → Oracle, not Orchid Island).
+        1 search, basic depth = ~75% weniger Tavily-Credits als vorher.
         Returns: {"context": str, "sources": list}
         """
-        queries = [
-            f"{ticker} insider buying selling open market transactions 2024 2025",
-            f"{ticker} competitive advantage moat business risks latest news analyst opinion",
-        ]
+        name = company_name or ticker
+        # Single combined query using full company name to avoid ticker ambiguity
+        query = f"{name} insider buying selling competitive advantage moat risks analyst 2025"
 
         all_results = []
         all_sources = []
 
-        for query in queries:
-            result = await self.search(query, max_results=4)
-            if result["success"]:
-                if result["answer"]:
-                    all_results.append(f"Summary: {result['answer']}")
-                for r in result["results"]:
-                    all_results.append(f"[{r['url']}]: {r['content'][:500]}")
-                    all_sources.append({"url": r["url"], "title": r["title"]})
-            await asyncio.sleep(0.3)
+        result = await self.search(query, max_results=3, search_depth="basic")
+        if result["success"]:
+            if result["answer"]:
+                all_results.append(f"Summary: {result['answer']}")
+            for r in result["results"]:
+                all_results.append(f"[{r['url']}]: {r['content'][:400]}")
+                all_sources.append({"url": r["url"], "title": r.get("title", r["url"])})
 
         return {"context": "\n\n".join(all_results), "sources": all_sources}
 

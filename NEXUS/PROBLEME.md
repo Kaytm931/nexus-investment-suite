@@ -1,6 +1,6 @@
 # NEXUS — Bug-Tracker & Problemliste
 
-> Letzte Aktualisierung: 2026-04-05 (Session 2)
+> Letzte Aktualisierung: 2026-04-05 (Session 3)
 
 ---
 
@@ -18,6 +18,10 @@
 
 ## ✅ Gelöst
 
+- **Ticker-Verwechslung (ORC.DE → Orchid Island statt Oracle)** (2026-04-05 S3): Root Cause: `gather_ticker_qualitative` nutzte nur den Ticker-Kürzel in Queries; LLM recherchierte die falsche Firma. Fix: `gather_ticker_qualitative(company_name=)` nutzt jetzt den yFinance-Firmennamen. `user_message` enthält "⚠️ UNTERNEHMEN: {company_name}" als prominente Pflicht-Information. ALTAIR_SYSTEM_PROMPT verbietet Ticker-only-Recherchen.
+- **Tavily Token-Optimierung** (2026-04-05 S3): `gather_ticker_qualitative` reduziert von 2 Suchen×4 Ergebnisse (advanced) auf 1 Suche×3 Ergebnisse (basic) → ~75% weniger Tavily-Credits. `search_fn` in Agentic Loop: max_results=2→1, search_depth=advanced→basic, content[:300]→[:200]. Gesamt: von ~12 Quellen auf ~6 Quellen pro Analyse.
+- **Fair Value Mrd. EUR statt EUR/Aktie** (2026-04-05 S3): Prompt erzwingt jetzt "Fair Value IMMER als Preis pro Aktie (€/Aktie)" mit expliziter Berechnungsformel. Spaltenheader Rendite-Tabelle auf "Fair Value (€/Aktie)" geändert.
+- **Conviction Score Widerspruch** (2026-04-05 S3): Prompt hat jetzt verbindliche Score-Tabelle: "Score 5/4 → 4-7%, Score 6/7 → 8-12%". LLM darf keine eigene Interpretation vornehmen. Vorher: Score 5 → LLM schrieb "8-12%" (falsch).
 - **Markdown Bold/Italic in MarkdownSection + SimpleTable** (2026-04-05 S2): `renderInline()` ersetzt `**...**` → `<strong>` und `*...*` → `<em>`. Gilt für alle Zeilen-Typen in MarkdownSection und alle Tabellenzellen in SimpleTable. Vorher wurden Asterisken literal angezeigt.
 - **Conclusion-Dopplung (extractReportSections)** (2026-04-05 S2): `sections.conclusion` wird nur beim ersten Match gesetzt (`if (!sections.conclusion)`). Verhindert, dass "Modul 4 — Kapitalallokation" und "## 5. Fazit" denselben Slot überschreiben und doppelten Inhalt erzeugen.
 - **Rendite-Tabelle Fallback** (2026-04-05 S2): `SimpleTable` fällt bei fehlendem Markdown-Table auf `MarkdownSection` zurück statt rohen Text zu dumpen. Bullet-Lists werden damit korrekt gerendert.

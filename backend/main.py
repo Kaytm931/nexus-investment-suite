@@ -130,6 +130,8 @@ Format: **Daten:** Tavily Web Search | Basis: Live-Daten | Modell: Lokal ✅
 
 ALTAIR_SYSTEM_PROMPT = """Du bist Altair, ein KI-System für Value Investing. Starte SOFORT. Keine Willkommensnachricht.
 
+RECHERCHE-PFLICHT: Nutze in ALLEN ```research Queries IMMER den vollständigen Firmennamen aus dem ANALYSE-AUFTRAG-Header (z.B. "Oracle Corporation", nicht "ORC"). Ticker-Kürzel allein können zu falschen Suchergebnissen führen.
+
 SCHRITT 0 — TYP-ERKENNUNG (PFLICHT)
 ETF-Signale: "ETF", "UCITS", "iShares", "Vanguard", "Xtrackers", "Amundi", "SPDR", "Lyxor".
 FALL A — ETF → SEKTION ETF-ANALYSE (überspringe Phase 1+2)
@@ -181,14 +183,21 @@ MODUL 4 — KAPITALALLOKATION
 Conviction Score (0-7) — PFLICHT: Zeige für jedes Kriterium den zugeteilten Punkt, z.B.:
 +2 MoS >30% ✓ | +2 Wide Moat ✓ | +1 kein Kill-Szenario ✓ | +1 Insider-Käufe ✗ | -1 ND/EBITDA >3 ✗ → Gesamt: X/7
 Kriterien: +2 MoS >30%, +1 MoS 15-30%, +2 Wide Moat, +1 Mod. Moat, +1 kein Kill-Szenario, -1 starkes Kill-Szenario, +1 Insider-Käufe netto, -1 ND/EBITDA >3
-6-7→8-12% | 4-5→4-7% | 2-3→1-3% | 0-1→Nicht kaufen
+
+Positionsgröße VERBINDLICH (exakt diese Tabelle, keine eigene Interpretation):
+Score 7 oder 6 → Positionsgröße 8-12%
+Score 5 oder 4 → Positionsgröße 4-7%
+Score 3 oder 2 → Positionsgröße 1-3%
+Score 1 oder 0 → NICHT KAUFEN
 
 Timing-Signal: >20% unter FV→🟢 JETZT KAUFEN | 5-20%→🟡 WARTE | nahe/über FV→🔴 WATCHLIST
 
-Rendite-Tabelle (Markdown-Tabelle PFLICHT): | Szenario | Fair Value | Kaufkurs | Rendite 3J | Rendite 5J | p.a. |
+Fair Value PFLICHT: IMMER als Preis pro Aktie in der Handelswährung (z.B. 185,00 EUR/Aktie), NIEMALS als Marktkapitalisierung in Mrd. Berechnung: Eigenkapitalwert (EUR) ÷ Aktienanzahl = Fair Value pro Aktie.
+
+Rendite-Tabelle (Markdown-Tabelle PFLICHT): | Szenario | Fair Value (€/Aktie) | Kaufkurs | Rendite 3J | Rendite 5J | p.a. |
 Alpha-Check: Base p.a. vs. S&P 500 (~10%) / MSCI World (~8%).
 
-Abschluss-Dashboard: Conviction [X/7], Positionsgröße, Timing-Signal, Rendite 3J/5J/p.a., Alpha.
+Abschluss-Dashboard: Conviction [X/7], Positionsgröße (aus Tabelle oben), Timing-Signal, Rendite 3J/5J/p.a., Alpha.
 
 Regeln: Runde auf 2 Stellen. Kein Finanzberater. Niemals Zahlen erfinden."""
 
@@ -548,6 +557,7 @@ async def altair_analyze(request: AltairRequest):
             await manager.send_progress(session_id, f"Kein primärer Ticker ermittelbar — nutze Tavily-Fallback.")
 
     yf_context = yf_service.format_for_prompt(yf_data)
+    company_name = yf_data.get("name", "") or ticker
 
     # 1b. Risk-Free Rate — 10y US Treasury yield (^TNX)
     rfr_value = None
@@ -576,7 +586,7 @@ async def altair_analyze(request: AltairRequest):
             sources = fallback["sources"]
             await manager.send_progress(session_id, f"Fallback: {len(sources)} Quellen via Tavily gesammelt.")
         else:
-            qual_data = await search_service.gather_ticker_qualitative(ticker)
+            qual_data = await search_service.gather_ticker_qualitative(ticker, company_name=company_name)
             qualitative_context = qual_data["context"]
             sources = qual_data["sources"]
             await manager.send_progress(session_id, f"Daten komplett ({len(sources)} Quellen). Starte Analyse...")
@@ -596,7 +606,8 @@ async def altair_analyze(request: AltairRequest):
     yf_context_capped = yf_context[:3000]
     qual_context_capped = (qualitative_context or "Keine Web-Suche konfiguriert.")[:2500]
 
-    user_message = f"""ANALYSE-AUFTRAG: {ticker}
+    user_message = f"""ANALYSE-AUFTRAG: {ticker} — {company_name}
+⚠️ UNTERNEHMEN: "{company_name}" (Ticker: {ticker}). Nutze IMMER den vollständigen Firmennamen in Recherche-Queries, NIEMALS nur das Ticker-Kürzel — Kürzel können auf mehrere Unternehmen zeigen.
 {yf_hint}
 
 ## ZINSDATEN (für DCF-Berechnung):
@@ -608,7 +619,7 @@ async def altair_analyze(request: AltairRequest):
 ## QUALITATIVE KONTEXTDATEN (Insider, News, Moat):
 {qual_context_capped}
 
-Starte jetzt mit Phase 1: Recherchiere die optimale Bewertungsmethodik für dieses Asset."""
+Starte jetzt mit Phase 1: Recherchiere die optimale Bewertungsmethodik für {company_name}."""
 
     # 3. Agentic loop — research → calculate → report
     async def progress(msg):
@@ -618,14 +629,14 @@ Starte jetzt mit Phase 1: Recherchiere die optimale Bewertungsmethodik für dies
         """Wrapper: runs Tavily search and returns formatted string for the model."""
         if not search_service:
             return "Tavily nicht konfiguriert — keine Suche möglich."
-        result = await search_service.search(query, max_results=2)
+        result = await search_service.search(query, max_results=1, search_depth="basic")
         if not result["success"]:
             return f"Suche fehlgeschlagen: {result.get('error', 'unbekannt')}"
         parts = []
         if result.get("answer"):
-            parts.append(f"Zusammenfassung: {result['answer'][:400]}")
+            parts.append(f"Zusammenfassung: {result['answer'][:300]}")
         for r in result.get("results", []):
-            parts.append(f"[{r['url']}]\n{r['content'][:300]}")
+            parts.append(f"[{r['url']}]\n{r['content'][:200]}")
             sources.append({"url": r["url"], "title": r.get("title", r["url"])})
         return "\n\n".join(parts) if parts else "Keine Ergebnisse gefunden."
 
