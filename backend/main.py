@@ -610,14 +610,14 @@ Starte jetzt mit Phase 1: Recherchiere die optimale Bewertungsmethodik für dies
         """Wrapper: runs Tavily search and returns formatted string for the model."""
         if not search_service:
             return "Tavily nicht konfiguriert — keine Suche möglich."
-        result = await search_service.search(query, max_results=4)
+        result = await search_service.search(query, max_results=2)
         if not result["success"]:
             return f"Suche fehlgeschlagen: {result.get('error', 'unbekannt')}"
         parts = []
         if result.get("answer"):
-            parts.append(f"Zusammenfassung: {result['answer']}")
+            parts.append(f"Zusammenfassung: {result['answer'][:400]}")
         for r in result.get("results", []):
-            parts.append(f"[{r['url']}]\n{r['content'][:400]}")
+            parts.append(f"[{r['url']}]\n{r['content'][:300]}")
             sources.append({"url": r["url"], "title": r.get("title", r["url"])})
         return "\n\n".join(parts) if parts else "Keine Ergebnisse gefunden."
 

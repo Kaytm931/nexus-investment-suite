@@ -56,49 +56,68 @@ class GroqService:
             "temperature": 0.1,
             "max_tokens":  8192,
         }
-        collected   = []
-        chunk_count = 0
 
-        try:
-            async with self._client.stream(
-                "POST",
-                f"{GROQ_API_BASE}/chat/completions",
-                headers=self._headers(),
-                json=payload,
-                timeout=timeout,
-            ) as response:
-                if response.status_code != 200:
-                    body = await response.aread()
-                    return {
-                        "success": False,
-                        "content": "",
-                        "error": f"Groq HTTP {response.status_code}: {body.decode()[:300]}",
-                    }
-                async for line in response.aiter_lines():
-                    if not line or not line.startswith("data:"):
-                        continue
-                    raw = line[5:].strip()
-                    if raw == "[DONE]":
-                        break
-                    try:
-                        ev    = json.loads(raw)
-                        delta = ev.get("choices", [{}])[0].get("delta", {}).get("content", "")
-                        if delta:
-                            collected.append(delta)
-                            chunk_count += 1
-                            if progress_callback and chunk_count % 50 == 0:
-                                chars = sum(len(c) for c in collected)
-                                await progress_callback(f"{progress_prefix}... ({chars} Zeichen)")
-                    except json.JSONDecodeError:
-                        continue
+        for attempt in range(4):  # up to 3 retries on 429
+            collected   = []
+            chunk_count = 0
+            try:
+                async with self._client.stream(
+                    "POST",
+                    f"{GROQ_API_BASE}/chat/completions",
+                    headers=self._headers(),
+                    json=payload,
+                    timeout=timeout,
+                ) as response:
+                    if response.status_code == 429:
+                        body = await response.aread()
+                        err_text = body.decode()
+                        # Parse exact wait time from Groq error message
+                        wait_match = re.search(r'try again in (\d+\.?\d*)s', err_text)
+                        wait_secs = float(wait_match.group(1)) + 2.0 if wait_match else 35.0
+                        if attempt < 3:
+                            if progress_callback:
+                                await progress_callback(
+                                    f"⏳ Rate-Limit — warte {wait_secs:.0f}s (Versuch {attempt+1}/3)..."
+                                )
+                            await asyncio.sleep(wait_secs)
+                            continue  # retry
+                        return {"success": False, "content": "", "error": f"Groq 429 nach 3 Versuchen: {err_text[:200]}"}
 
-            return {"success": True, "content": "".join(collected), "error": None}
+                    if response.status_code != 200:
+                        body = await response.aread()
+                        return {
+                            "success": False,
+                            "content": "",
+                            "error": f"Groq HTTP {response.status_code}: {body.decode()[:300]}",
+                        }
 
-        except httpx.TimeoutException:
-            partial = "".join(collected)
-            return {"success": bool(partial), "content": partial, "error": "Timeout — Teilantwort"}
-        except Exception as e:
-            return {"success": False, "content": "", "error": str(e)}
+                    async for line in response.aiter_lines():
+                        if not line or not line.startswith("data:"):
+                            continue
+                        raw = line[5:].strip()
+                        if raw == "[DONE]":
+                            break
+                        try:
+                            ev    = json.loads(raw)
+                            delta = ev.get("choices", [{}])[0].get("delta", {}).get("content", "")
+                            if delta:
+                                collected.append(delta)
+                                chunk_count += 1
+                                if progress_callback and chunk_count % 50 == 0:
+                                    chars = sum(len(c) for c in collected)
+                                    await progress_callback(f"{progress_prefix}... ({chars} Zeichen)")
+                        except json.JSONDecodeError:
+                            continue
+
+                return {"success": True, "content": "".join(collected), "error": None}
+
+            except httpx.TimeoutException:
+                partial = "".join(collected)
+                return {"success": bool(partial), "content": partial, "error": "Timeout — Teilantwort"}
+            except Exception as e:
+                return {"success": False, "content": "", "error": str(e)}
+
+        return {"success": False, "content": "", "error": "Rate-Limit: maximale Wiederholungen erreicht"}
 
     # ── Simple single-turn chat (Elara) ────────────────────────────────────────
 
@@ -147,7 +166,7 @@ class GroqService:
         final_content  = ""
 
         # Keep system + first user message fixed; trim middle to cap history size
-        def _trim_messages(msgs: list, keep_last_pairs: int = 3) -> list:
+        def _trim_messages(msgs: list, keep_last_pairs: int = 2) -> list:
             """Keep system(0) + first user(1) + last N assistant/user pairs."""
             fixed = msgs[:2]
             rest  = msgs[2:]
