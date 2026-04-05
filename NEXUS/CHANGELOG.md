@@ -4,6 +4,34 @@
 
 ---
 
+## 2026-04-05 Session 3 — Altair Output Quality (Klein + Mittel + Groß)
+
+**Commits:** `a38e987`, `aa116a2`
+
+### Klein (Frontend — Analysis.jsx)
+- `renderInline()` helper: `**bold**` → `<strong>`, `*italic*` → `<em>`. In allen MarkdownSection-Zeilen und SimpleTable-Zellen aktiv. Vorher: Asterisken literal angezeigt.
+- `SimpleTable` Fallback → `MarkdownSection` statt rohem Text (Rendite-Tabelle als Bullet-List jetzt korrekt gerendert).
+- `extractReportSections`: `conclusion` first-match-wins statt overwrite → kein doppelter Dashboard-Inhalt.
+- Sources-Card: `report.sources` wird nach Conclusion als "Quellen"-Sektion mit klickbaren Links angezeigt.
+- Fallback-View: nutzt jetzt `raw_content` (wie strukturierte View).
+
+### Mittel (ALTAIR_SYSTEM_PROMPT — main.py)
+- Asset Manager Sektor-Methodik ergänzt: KBV, AUM-Wachstum, Fee-Marge — KEIN DCF.
+- Pre-Mortem: unternehmens-spezifische Ursache Pflicht (kein allgemeiner Marktabschwung).
+- Peer-Check: GENAU 2 Peers mit Name + Ticker Pflicht.
+- Conviction Score: Punkt-für-Punkt Herleitung mit Format "+2 MoS ✓ | +2 Wide Moat ✗ → Gesamt: X/7".
+- Rendite-Tabelle: "Markdown-Tabelle PFLICHT" mit Header-Format.
+
+### Groß (Backend — main.py + search_service.py)
+- **Ticker-Verwechslung behoben**: `gather_ticker_qualitative(company_name=)` nutzt yFinance-Firmennamen in Queries. `user_message` enthält prominente "⚠️ UNTERNEHMEN:" Warnung. Prompt verbietet Ticker-only-Recherchen. Verhindert ORC.DE → Orchid Island statt Oracle.
+- **Tavily ~75% weniger Credits**: `gather_ticker_qualitative` 2×advanced×4 → 1×basic×3. `search_fn` max_results 2→1, basic, content 300→200 chars.
+- **Fair Value pro Aktie**: Prompt erzwingt EUR/Aktie (Eigenkapitalwert ÷ Aktienanzahl), verbietet Mrd.-Angaben als Fair Value.
+- **Conviction Score Mapping verbindlich**: Explizite Score→Positionsgröße Tabelle (Score 5→4-7%, Score 6→8-12%), keine LLM-Interpretation.
+
+**Build:** ✅
+
+---
+
 ## 2026-04-06 — Screener-Crash + Analysis-Parsing + Hero-Visual + Chart-Datum
 
 **Commit:** `81004bd`

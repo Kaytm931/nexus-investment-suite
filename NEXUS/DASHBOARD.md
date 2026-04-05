@@ -1,18 +1,18 @@
 # NEXUS — Dashboard
 
-> Zuletzt aktualisiert: 2026-04-03 von Claude Code
+> Zuletzt aktualisiert: 2026-04-05 Session 3 von Claude Code
 
 ---
 
 ## 🚦 Projektstatus
 
-**In Entwicklung — Bugfixes laufend. 3 von 9 Bugs behoben. Nächste Session: Bundle-Size, Error Boundaries, Auth-Erweiterungen.**
+**Altair Output-Qualität: Session 3 abgeschlossen. Klein + Mittel + Groß Fixes deployed. Ticker-Verwechslung, Tavily-Optimierung, Fair Value, Conviction Score Widerspruch behoben.**
 
 ---
 
 ## Was gerade läuft
 
-Vault aufgebaut, erste Bugfix-Runde abgeschlossen. `index.css` bereinigt, `PerformanceChart.jsx` vollständig auf Dark Theme gebracht, Portfolio-Persistenz-Problem analysiert (nur Render-Env-Vars fehlen). Commit `1647445` gepusht. Pause bis nach Ostern.
+Session 3 (2026-04-05): Altair-Analyse-Qualität komplett überarbeitet. Drei Commit-Runden (Klein/Mittel/Groß). Root Cause Ticker-Verwechslung (ORC.DE → Orchid Island statt Oracle) behoben. Tavily ~75% günstiger. Fair Value jetzt pro Aktie. Conviction Score Widerspruch beseitigt. Markdown Bold/Italic gerendert. Quellen-Sektion. Commits: `a38e987`, `aa116a2`.
 
 ---
 
@@ -41,8 +41,12 @@ Vault aufgebaut, erste Bugfix-Runde abgeschlossen. `index.css` bereinigt, `Perfo
 | Portfolio CRUD | ✅ | Positionen hinzufügen/bearbeiten/löschen |
 | Groq API Integration | ✅ | llama-3.3-70b-versatile als primäres Modell |
 | Obsidian Vault | ✅ | `NEXUS/` aktiv seit 2026-04-03, `CLAUDE_CODE_FAEHIGKEITEN.md` im Vault-Root |
-| Error Boundaries | ❌ | Noch nicht implementiert |
-| "Passwort vergessen" | ❌ | Auth-Flow fehlt |
+| Error Boundaries | ✅ | App.jsx, jede Route gewrapped |
+| "Passwort vergessen" | ✅ | Auth.jsx, Supabase resetPasswordForEmail + Recovery-Hash |
+| Altair Inline-Markdown | ✅ | renderInline() — **bold** + *italic* korrekt gerendert |
+| Altair Fair Value/Aktie | ✅ | Prompt erzwingt EUR/Aktie, kein Mrd.-Wert |
+| Altair Ticker-Confusion | ✅ | company_name aus yFinance in allen Queries |
+| Altair Tavily-Kosten | ✅ | ~75% weniger Credits pro Analyse |
 
 ### Deployment
 
