@@ -110,10 +110,8 @@ function MoverRow({ item, isGainer }) {
   return (
     <Link
       to={`/analyse?ticker=${item.ticker}`}
-      className="screener-row flex items-center justify-between py-3 px-3 rounded-xl -mx-3 transition-all duration-200 group"
+      className="screener-row flex items-center justify-between py-3 px-3 rounded-xl -mx-3 transition-all duration-200 group hover:bg-[rgba(79,142,247,0.05)]"
       style={{ color: 'inherit' }}
-      onMouseEnter={e => e.currentTarget.style.background = 'rgba(79,142,247,0.05)'}
-      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
     >
       <div className="flex items-center gap-3">
         <div

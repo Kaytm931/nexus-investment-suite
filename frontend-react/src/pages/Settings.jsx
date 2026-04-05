@@ -368,6 +368,11 @@ export default function Settings() {
         <div>
           <label className="label">Claude API-Key</label>
           <SecretInput value={claudeKey} onChange={setClaudeKey} placeholder="sk-ant-api03-..." disabled={claudeSaving} />
+          {claudeStatus && !claudeKey && (
+            <p className="text-xs mt-1.5" style={{ color: 'var(--text-muted)' }}>
+              ✓ Key hinterlegt — neuen eingeben zum Überschreiben
+            </p>
+          )}
         </div>
         {claudeMsg && <p className="text-xs" style={{ color: claudeStatus ? 'var(--success)' : 'var(--danger)' }}>{claudeMsg}</p>}
         <div className="flex gap-2">
@@ -399,6 +404,11 @@ export default function Settings() {
         <div>
           <label className="label">OpenAI API-Key</label>
           <SecretInput value={openaiKey} onChange={setOpenaiKey} placeholder="sk-proj-..." disabled={openaiSaving} />
+          {openaiStatus && !openaiKey && (
+            <p className="text-xs mt-1.5" style={{ color: 'var(--text-muted)' }}>
+              ✓ Key hinterlegt — neuen eingeben zum Überschreiben
+            </p>
+          )}
         </div>
         {openaiMsg && <p className="text-xs" style={{ color: openaiStatus ? 'var(--success)' : 'var(--danger)' }}>{openaiMsg}</p>}
         <div className="flex gap-2">
@@ -430,6 +440,11 @@ export default function Settings() {
         <div>
           <label className="label">Gemini API-Key</label>
           <SecretInput value={geminiKey} onChange={setGeminiKey} placeholder="AIzaSy..." disabled={geminiSaving} />
+          {geminiStatus && !geminiKey && (
+            <p className="text-xs mt-1.5" style={{ color: 'var(--text-muted)' }}>
+              ✓ Key hinterlegt — neuen eingeben zum Überschreiben
+            </p>
+          )}
         </div>
         {geminiMsg && <p className="text-xs" style={{ color: geminiStatus ? 'var(--success)' : 'var(--danger)' }}>{geminiMsg}</p>}
         <div className="flex gap-2">
