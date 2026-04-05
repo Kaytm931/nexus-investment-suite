@@ -4,6 +4,36 @@
 
 ---
 
+## 2026-04-06 — Screener-Crash + Analysis-Parsing + Hero-Visual + Chart-Datum
+
+**Commit:** `81004bd`
+
+- `Screener.jsx` — TDZ-Crash behoben: `useEffect` referenzierte `result` vor `useState`-Deklaration (Temporal Dead Zone). State-Deklarationen nach oben verschoben.
+- `Analysis.jsx` — `extractReportSections()` robuster: Heading-Normalisierung (`###`→`##`, `**Bold:**`→`##`) vor dem Split, Sektion-Matching per Regex statt einzelner Strings. Fallback-UI: `MarkdownSection` + gelbes Info-Banner statt rohem Monospace-Pre.
+- `Home.jsx` — Hero-Bereich: 2-Spalten-Layout (`lg:grid-cols-2`). Neue `HeroVisual`-Komponente rechts: Mock-Analyse-Card (AAPL, SVG-Kurschart, Conviction/DCF/Upside-Metriken, Scan-Line-CSS-Animation, floating Badges). GSAP-Timeline um `.hero-visual` (fade-in von rechts) erweitert.
+- `StockChart.jsx` — X-Achse zeigt nun echte Datumsangaben: `formatDate()` erkennt Unix-ms-Timestamps (>1e10) + ISO-Strings, formatiert als `"12. Mär"` (de-DE Locale). `tickFormatter` + `minTickGap={40}`. Tooltip-Label ebenfalls formatiert.
+- `index.css` — `@keyframes scanline` + `@keyframes fadeInUp` ergänzt.
+- `NEXUS/PROBLEME.md` — Alle 4 Bugs als gelöst markiert. Liste bereinigt.
+
+**Build:** ✅ keine Warnings
+
+---
+
+## 2026-04-05 Session 2 — Market Cards Fix + Bundle-Splitting + UX-Cleanup
+
+**Commits:** `08beced`, `37a5494`
+
+- `Home.jsx` — Market Cards Fix: GSAP `ctx.revert()` Cleanup ersetzte Karten 2+3 dauerhaft mit `opacity:0`. Fix: `gsap.fromTo()` direkt auf `marketRef.current.querySelectorAll('.index-card')` ohne cleanup-Revert. Spark-Daten `[number]` → `[{date, value}]` Mapping für `StockChart`.
+- `Home.jsx MoverRow` — `onMouseEnter/onMouseLeave` Inline-Handler → Tailwind `hover:bg-[rgba(79,142,247,0.05)]`.
+- `Settings.jsx` — Optionale Groq-Key-Eingabe entfernt (State, Handler, Input, Buttons). Nur grüne Info-Box "Kostenlos & sofort nutzbar" bleibt.
+- `Settings.jsx` — Key-Status Hinweis: "✓ Key hinterlegt — neuen eingeben zum Überschreiben" für Claude/OpenAI/Gemini wenn `status === true` und Feld leer.
+- `vite.config.js` — `manualChunks`: vendor / gsap / charts / icons / supabase. 1 Chunk 1021 kB → 6 Chunks, größter 394 kB. Vite-Warnung weg.
+- **Render** — `SUPABASE_URL` + `SUPABASE_SERVICE_KEY` (service_role) eingetragen → Portfolio-Persistenz aktiv.
+
+**Build:** ✅ keine Warnings mehr
+
+---
+
 ## 2026-04-05 — Error Boundaries + Passwort-Reset
 
 - `App.jsx` — `ErrorBoundary` Class-Komponente hinzugefügt. Jede Route einzeln gewrapped (`/`, `/auth`, `/screener`, `/analyse`, `/portfolio`, `/settings`). Bei Render-Fehler: Fallback-UI mit Fehlermeldung, "Erneut versuchen" + "Zur Startseite" — kein App-Crash mehr.

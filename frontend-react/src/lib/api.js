@@ -2,8 +2,8 @@ import { supabase } from './supabase'
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:7842'
 
-// WebSocket base: http → ws, https → wss
-export const WS_BASE = API_BASE.replace(/^http/, 'ws')
+// WebSocket base: https → wss (production), http → ws (local)
+export const WS_BASE = API_BASE.replace(/^https/, 'wss').replace(/^http/, 'ws')
 
 async function getAuthHeaders() {
   const { data: { session } } = await supabase.auth.getSession()

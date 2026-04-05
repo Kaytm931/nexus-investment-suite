@@ -1,18 +1,12 @@
 # NEXUS — Bug-Tracker & Problemliste
 
-> Letzte Aktualisierung: 2026-04-06
+> Letzte Aktualisierung: 2026-04-05
 
 ---
 
 ## 🔴 Offen
 
-- [x] **Screener.jsx — App-Crash beim Öffnen**: TDZ-Fehler "can't access lexical declaration 'y' before initialization". Ursache: `useEffect` referenzierte `result` in Dep-Array bevor `const [result] = useState()` deklariert war. Fix: State-Deklarationen VOR `useEffect` verschoben. Gelöst 2026-04-06.
-
-- [x] **Analysis.jsx — Regex-Parsing fragil**: Normalisierung vor dem Split: `###`→`##`, `**Bold:**`→`##`. Mehr Keywords pro Sektion-Match (Regex statt einzelne Strings). Fallback-UI: `MarkdownSection` statt Monospace-Pre + gelbes Info-Banner "Struktur nicht erkannt". Gelöst 2026-04-06.
-
-- [x] **Home.jsx — Hero rechte Seite leer**: `HeroVisual`-Komponente eingefügt: Mock-Analyse-Card (AAPL, SVG-Chart, Conviction/DCF-Metriken, Scan-Line-Animation, floating Badges). Hero-Layout → `grid lg:grid-cols-2`. GSAP-Timeline um `.hero-visual` erweitert. Gelöst 2026-04-06.
-
-- [x] **StockChart.jsx — X-Achse zeigt Zahlen statt Datum**: `tickFormatter` + `formatDate()` Hilfsfunktion ergänzt. Erkennt Unix-ms-Timestamps (>1e10) und ISO-Strings, formatiert als `"12. Mär"` (de-DE). Tooltip-Label ebenfalls aktualisiert. `minTickGap={40}` verhindert Überfüllung. Gelöst 2026-04-06.
+*(Keine offenen Bugs)*
 
 ---
 
@@ -24,10 +18,10 @@
 
 ## ✅ Gelöst
 
-- [x] **Screener.jsx — TDZ-Crash**: `useEffect` vor `useState`-Deklaration. State nach oben verschoben. 2026-04-06.
-- [x] **Analysis.jsx — Regex-Parsing fragil**: Heading-Normalisierung + mehr Keywords + verbesserter Fallback. 2026-04-06.
-- [x] **Home.jsx — Hero Visual**: 2-Spalten-Layout + HeroVisual-Card. 2026-04-06.
-- [x] **StockChart.jsx — X-Achse Datumsformat**: formatDate() + tickFormatter. 2026-04-06.
+- **NaN-Handling: Portfolio.jsx + Home.jsx** (2026-04-05): `isNaN()`-Guards vor allen `.toFixed()`-Aufrufen — zeigen '—' statt "NaN%". Spark-Daten in Home.jsx werden vor Übergabe an StockChart gefiltert. `change?.toFixed() ?? '—'` war unzureichend (NaN passierte durch).
+- **Header.jsx — Cold Start Retry-UX** (2026-04-05): Wenn Health-Check fehlschlägt, startet automatisch 5s-Retry-Loop (max. 12 Versuche = 60s). Badge zeigt Amber-Spinner "Backend startet…" statt rot "offline". Nach erfolgreicher Antwort → grün, Retry stoppt.
+- **Auth.jsx — Password Recovery Hash-Handling** (2026-04-05): `useEffect` erkennt `type=recovery` im URL-Hash und zeigt dediziertes "Neues Passwort"-Formular. `supabase.auth.updateUser()` setzt neues Passwort, danach Redirect zu `/portfolio`.
+- **WS_BASE: https→wss Mixed-Content-Fix** (2026-04-05): `API_BASE.replace(/^https/, 'wss').replace(/^http/, 'ws')` — explizite Zwei-Schritt-Ersetzung statt `/^http/`-Catch-All. Verhindert Mixed-Content-Fehler auf Render (HTTPS-Produktion).
 
 ---
 

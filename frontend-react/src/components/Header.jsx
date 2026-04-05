@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { checkHealth } from '../lib/api'
-import { LogOut, User, ChevronDown, Menu, X, Briefcase, Settings } from 'lucide-react'
+import { LogOut, User, ChevronDown, Menu, X, Briefcase, Settings, Loader2 } from 'lucide-react'
 
 const navLinks = [
   { to: '/',          label: 'Märkte',   exact: true },
@@ -15,10 +15,12 @@ export default function Header() {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
   const [backendOnline, setBackendOnline] = useState(null)
+  const [backendStarting, setBackendStarting] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const userMenuRef = useRef(null)
+  const retryRef = useRef(null)
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20)
@@ -26,12 +28,48 @@ export default function Header() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  useEffect(() => {
-    const check = async () => setBackendOnline(await checkHealth())
-    check()
-    const id = setInterval(check, 30_000)
-    return () => clearInterval(id)
+  const startRetryLoop = useCallback(() => {
+    if (retryRef.current) return // already retrying
+    let attempts = 0
+    setBackendStarting(true)
+    retryRef.current = setInterval(async () => {
+      attempts++
+      const ok = await checkHealth()
+      if (ok) {
+        setBackendOnline(true)
+        setBackendStarting(false)
+        clearInterval(retryRef.current)
+        retryRef.current = null
+      } else if (attempts >= 12) {
+        // Give up after 60s — mark offline, stop spinner
+        setBackendOnline(false)
+        setBackendStarting(false)
+        clearInterval(retryRef.current)
+        retryRef.current = null
+      }
+    }, 5_000)
   }, [])
+
+  useEffect(() => {
+    const check = async () => {
+      const ok = await checkHealth()
+      setBackendOnline(ok)
+      if (!ok) startRetryLoop()
+    }
+    check()
+    const id = setInterval(async () => {
+      // Only do the 30s poll when NOT already retrying
+      if (!retryRef.current) {
+        const ok = await checkHealth()
+        setBackendOnline(ok)
+        if (!ok) startRetryLoop()
+      }
+    }, 30_000)
+    return () => {
+      clearInterval(id)
+      if (retryRef.current) clearInterval(retryRef.current)
+    }
+  }, [startRetryLoop])
 
   useEffect(() => {
     const handler = (e) => {
@@ -49,7 +87,18 @@ export default function Header() {
   }
 
   const username = user?.user_metadata?.username || user?.email?.split('@')[0] || 'Nutzer'
-  const statusColor = backendOnline === null ? '#6b7599' : backendOnline ? '#7cffcb' : '#ff4d6d'
+  const statusColor = backendOnline === null || backendStarting
+    ? '#f59e0b'
+    : backendOnline
+      ? '#7cffcb'
+      : '#ff4d6d'
+  const statusTitle = backendStarting
+    ? 'Backend startet…'
+    : backendOnline === null
+      ? 'Verbinde…'
+      : backendOnline
+        ? 'Backend online'
+        : 'Backend offline'
 
   return (
     <header
@@ -84,15 +133,24 @@ export default function Header() {
             >
               NEXUS
             </span>
-            <div
-              className="w-1.5 h-1.5 rounded-full ml-0.5"
-              style={{
-                background: statusColor,
-                boxShadow: backendOnline ? `0 0 6px ${statusColor}` : 'none',
-                transition: 'background 0.3s, box-shadow 0.3s',
-              }}
-              title={backendOnline === null ? 'Verbinde…' : backendOnline ? 'Backend online' : 'Backend offline'}
-            />
+            {backendStarting ? (
+              <Loader2
+                size={11}
+                className="ml-1 animate-spin"
+                style={{ color: statusColor }}
+                title={statusTitle}
+              />
+            ) : (
+              <div
+                className="w-1.5 h-1.5 rounded-full ml-0.5"
+                style={{
+                  background: statusColor,
+                  boxShadow: backendOnline ? `0 0 6px ${statusColor}` : 'none',
+                  transition: 'background 0.3s, box-shadow 0.3s',
+                }}
+                title={statusTitle}
+              />
+            )}
           </Link>
 
           {/* Desktop Nav */}

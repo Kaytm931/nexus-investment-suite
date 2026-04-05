@@ -455,7 +455,7 @@ export default function Portfolio() {
             {totalPnl >= 0 ? '+' : ''}{formatCurrency(totalPnl)}
           </p>
           <p className="text-xs font-mono mt-0.5" style={{ color: totalPnlPct >= 0 ? 'var(--accent)' : 'var(--danger)' }}>
-            {totalPnlPct >= 0 ? '+' : ''}{(totalPnlPct * 100).toFixed(2)}%
+            {isNaN(totalPnlPct) ? '—' : `${totalPnlPct >= 0 ? '+' : ''}${(totalPnlPct * 100).toFixed(2)}%`}
           </p>
         </div>
         <div className="card p-4">
@@ -463,7 +463,9 @@ export default function Portfolio() {
           {bestPos ? (
             <>
               <p className="text-sm font-mono font-bold" style={{ color: 'var(--accent)' }}>{bestPos.ticker}</p>
-              <p className="text-xs font-mono" style={{ color: 'var(--accent)' }}>+{(bestPos.pct * 100).toFixed(2)}%</p>
+              <p className="text-xs font-mono" style={{ color: 'var(--accent)' }}>
+                {isNaN(bestPos.pct) ? '—' : `+${(bestPos.pct * 100).toFixed(2)}%`}
+              </p>
             </>
           ) : <p className="text-sm" style={{ color: 'var(--text-muted)' }}>—</p>}
         </div>
@@ -472,7 +474,9 @@ export default function Portfolio() {
           {worstPos && worstPos.pct < 0 ? (
             <>
               <p className="text-sm font-mono font-bold" style={{ color: 'var(--danger)' }}>{worstPos.ticker}</p>
-              <p className="text-xs font-mono" style={{ color: 'var(--danger)' }}>{(worstPos.pct * 100).toFixed(2)}%</p>
+              <p className="text-xs font-mono" style={{ color: 'var(--danger)' }}>
+                {isNaN(worstPos.pct) ? '—' : `${(worstPos.pct * 100).toFixed(2)}%`}
+              </p>
             </>
           ) : <p className="text-sm" style={{ color: 'var(--text-muted)' }}>—</p>}
         </div>
@@ -541,12 +545,12 @@ export default function Portfolio() {
                       <td className="num">{formatCurrency(pos.purchase_price)}</td>
                       <td className="num">{formatCurrency(curPrice)}</td>
                       <td className={`num ${positive ? 'positive' : 'negative'}`}>
-                        {positive ? '+' : ''}{formatCurrency(pnlEur)}
+                        {isNaN(pnlEur) ? <span style={{ color: 'var(--text-muted)' }}>—</span> : `${positive ? '+' : ''}${formatCurrency(pnlEur)}`}
                       </td>
                       <td className={`num ${positive ? 'positive' : 'negative'}`}>
-                        {positive ? '+' : ''}{(pnlPct * 100).toFixed(2)}%
+                        {isNaN(pnlPct) ? <span style={{ color: 'var(--text-muted)' }}>—</span> : `${positive ? '+' : ''}${(pnlPct * 100).toFixed(2)}%`}
                       </td>
-                      <td className="num">{(weight * 100).toFixed(1)}%</td>
+                      <td className="num">{isNaN(weight) ? '—' : `${(weight * 100).toFixed(1)}%`}</td>
                       <td>
                         {pos.sector ? <span className="badge badge-blue">{pos.sector}</span> : <span style={{ color: 'var(--text-muted)' }}>—</span>}
                       </td>

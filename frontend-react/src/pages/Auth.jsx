@@ -16,6 +16,11 @@ export default function Auth() {
   const [showConfirm, setShowConfirm] = useState(false)
   const [showReset, setShowReset] = useState(false)
 
+  // Password recovery state (when returning from reset email link)
+  const [isRecovery, setIsRecovery] = useState(false)
+  const [newPassword, setNewPassword] = useState('')
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState('')
+
   const from = location.state?.from?.pathname || '/portfolio'
 
   // Login form state
@@ -31,9 +36,17 @@ export default function Auth() {
   // Reset form state
   const [resetEmail, setResetEmail] = useState('')
 
+  // Detect Supabase recovery redirect (hash contains type=recovery)
   useEffect(() => {
-    if (user) navigate(from, { replace: true })
-  }, [user, navigate, from])
+    const hash = window.location.hash
+    if (hash.includes('type=recovery')) {
+      setIsRecovery(true)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (user && !isRecovery) navigate(from, { replace: true })
+  }, [user, navigate, from, isRecovery])
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -91,6 +104,31 @@ export default function Auth() {
     }
   }
 
+  const handleNewPassword = async (e) => {
+    e.preventDefault()
+    if (newPassword !== newPasswordConfirm) {
+      setError('Die Passwörter stimmen nicht überein.')
+      return
+    }
+    if (newPassword.length < 8) {
+      setError('Das Passwort muss mindestens 8 Zeichen lang sein.')
+      return
+    }
+    setError('')
+    setSuccess('')
+    setLoading(true)
+    try {
+      const { error: updateError } = await supabase.auth.updateUser({ password: newPassword })
+      if (updateError) throw updateError
+      setSuccess('Passwort erfolgreich geändert! Du wirst weitergeleitet…')
+      setTimeout(() => navigate('/portfolio', { replace: true }), 2000)
+    } catch (err) {
+      setError(err.message || 'Passwort konnte nicht geändert werden.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const openReset = () => {
     setShowReset(true)
     setResetEmail(loginEmail) // pre-fill from login field if already typed
@@ -117,6 +155,91 @@ export default function Auth() {
         </div>
 
         <div className="card">
+          {/* ── Password Recovery View (returned from reset email) ───── */}
+          {isRecovery ? (
+            <div className="p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                  style={{ background: 'rgba(79,142,247,0.12)' }}
+                >
+                  <Mail size={14} style={{ color: 'var(--primary)' }} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Neues Passwort setzen</p>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Gib dein neues Passwort ein</p>
+                </div>
+              </div>
+              {error && (
+                <div className="alert-error mb-4">
+                  <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                  <p>{error}</p>
+                </div>
+              )}
+              {success && (
+                <div className="alert-success mb-4">
+                  <CheckCircle size={16} className="shrink-0 mt-0.5" />
+                  <p>{success}</p>
+                </div>
+              )}
+              <form onSubmit={handleNewPassword} className="space-y-4">
+                <div>
+                  <label className="label">Neues Passwort</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={newPassword}
+                      onChange={e => setNewPassword(e.target.value)}
+                      className="input-field pr-10"
+                      placeholder="Min. 8 Zeichen"
+                      required
+                      minLength={8}
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors hover:text-[var(--text)]"
+                      style={{ color: 'var(--text-muted)' }}
+                    >
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="label">Passwort bestätigen</label>
+                  <div className="relative">
+                    <input
+                      type={showConfirm ? 'text' : 'password'}
+                      value={newPasswordConfirm}
+                      onChange={e => setNewPasswordConfirm(e.target.value)}
+                      className="input-field pr-10"
+                      placeholder="Passwort wiederholen"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirm(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors hover:text-[var(--text)]"
+                      style={{ color: 'var(--text-muted)' }}
+                    >
+                      {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  disabled={loading || !newPassword || !newPasswordConfirm}
+                  className="btn-primary w-full justify-center py-2.5"
+                >
+                  {loading && <Loader2 size={16} className="animate-spin" />}
+                  {loading ? 'Speichere…' : 'Passwort speichern'}
+                </button>
+              </form>
+            </div>
+          ) : (
+          <>
+
           {/* Tab toggle — hidden when showing reset view */}
           {!showReset && (
             <div className="flex border-b border-border">
@@ -348,6 +471,8 @@ export default function Auth() {
               </p>
             )}
           </div>
+          </>
+          )}
         </div>
 
         <p className="text-center text-xs mt-4" style={{ color: 'var(--text-muted)' }}>

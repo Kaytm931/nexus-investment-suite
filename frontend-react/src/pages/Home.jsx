@@ -78,13 +78,13 @@ function IndexCard({ index, fetchedAt }) {
           }}
         >
           {positive ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
-          {positive ? '+' : ''}{index.change?.toFixed(2) ?? '—'}%
+          {index.change == null || isNaN(index.change) ? '—' : `${positive ? '+' : ''}${index.change.toFixed(2)}%`}
         </span>
       </div>
 
       {index.spark?.length > 0 ? (
         <StockChart
-          data={index.spark.map((v, i) => ({ date: i, value: v }))}
+          data={index.spark.filter(v => v != null && !isNaN(v)).map((v, i) => ({ date: i, value: v }))}
           color={positive ? '#7cffcb' : '#ff4d6d'}
           height={52} minimal showArea
         />
@@ -151,7 +151,7 @@ function MoverRow({ item, isGainer }) {
           className="text-xs font-mono font-semibold"
           style={{ color: isGainer ? 'var(--success)' : 'var(--danger)' }}
         >
-          {isGainer ? '+' : ''}{item.change?.toFixed(2) ?? '—'}%
+          {item.change == null || isNaN(item.change) ? '—' : `${isGainer ? '+' : ''}${item.change.toFixed(2)}%`}
         </p>
       </div>
     </Link>
