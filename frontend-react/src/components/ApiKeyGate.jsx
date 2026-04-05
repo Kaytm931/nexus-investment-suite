@@ -1,9 +1,10 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import { KeyRound, Settings } from 'lucide-react'
+import { LogIn } from 'lucide-react'
 
 /**
- * ApiKeyGate — wraps content and shows a blur overlay when no API key
+ * ApiKeyGate — wraps content and shows a blur overlay when user is not logged in.
+ * All logged-in users have access via the server-side Groq key (no own key needed).
  */
 export default function ApiKeyGate({ hasApiKey, children }) {
   if (hasApiKey) return children
@@ -27,22 +28,22 @@ export default function ApiKeyGate({ hasApiKey, children }) {
         >
           <div
             className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
-            style={{ background: 'rgba(79,142,247,0.12)', border: '1px solid rgba(79,142,247,0.2)' }}
+            style={{ background: 'rgba(124,255,203,0.1)', border: '1px solid rgba(124,255,203,0.2)' }}
           >
-            <KeyRound size={24} style={{ color: 'var(--primary)' }} />
+            <LogIn size={24} style={{ color: 'var(--accent)' }} />
           </div>
           <h3 className="text-base font-semibold mb-2" style={{ color: 'var(--text)' }}>
-            API-Key erforderlich
+            Anmeldung erforderlich
           </h3>
           <p className="text-sm mb-5 leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-            Hinterlege deinen Groq API-Key in den Einstellungen, um KI-gestützte Analysen zu nutzen.
+            Melde dich an, um Elara und Altair kostenlos zu nutzen — kein eigener API-Key notwendig.
           </p>
-          <Link to="/settings" className="btn-primary w-full justify-center">
-            <Settings size={15} />
-            Zu den Einstellungen
+          <Link to="/auth" className="btn-primary w-full justify-center">
+            <LogIn size={15} />
+            Kostenlos anmelden
           </Link>
           <p className="text-xs mt-3" style={{ color: 'var(--text-muted)' }}>
-            Kostenloser Key verfügbar auf console.groq.com
+            Powered by Groq — kostenlos & unbegrenzt
           </p>
         </div>
       </div>

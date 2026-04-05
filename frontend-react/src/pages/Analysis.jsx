@@ -426,6 +426,20 @@ export default function Analysis() {
         </div>
       </div>
 
+      {/* Free-use notice */}
+      <div
+        className="flex items-start gap-3 px-4 py-3 rounded-xl mb-6 no-print"
+        style={{ background: 'rgba(124,255,203,0.06)', border: '1px solid rgba(124,255,203,0.15)' }}
+      >
+        <div className="w-2 h-2 rounded-full mt-1 shrink-0" style={{ background: 'var(--accent)', boxShadow: '0 0 6px var(--accent)' }} />
+        <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+          <strong style={{ color: 'var(--text)' }}>Kostenlos & sofort verfügbar.</strong>{' '}
+          Altair läuft über den NEXUS-Server (Groq llama-3.3-70b). Kein eigener API-Key notwendig.
+          Für erweiterte Modelle kannst du optional eigene Keys in den{' '}
+          <Link to="/settings" style={{ color: 'var(--primary)' }} className="hover:underline">Einstellungen</Link> hinterlegen.
+        </p>
+      </div>
+
       <ApiKeyGate hasApiKey={hasApiKey}>
         <div className="space-y-6">
           {/* Search bar */}

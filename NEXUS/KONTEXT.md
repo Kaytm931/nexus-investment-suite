@@ -1,6 +1,6 @@
 # NEXUS Investment Suite — Vollständiger Projektkontext
 
-> Letzte Aktualisierung: 2026-04-02 | Stand: Phase 2 Design Reboot abgeschlossen, _project/ eingerichtet
+> Letzte Aktualisierung: 2026-04-05 | Stand: Freies Nutzungsmodell + OpenAI/Gemini Keys + Market Cards Fix
 
 ---
 
@@ -13,7 +13,7 @@ Ziel: Research-Qualität wie professionelle Analysten — kostenlos, BYOK (Bring
 - **Elara** — Quantamentaler Sektor-Screener: 14 Sektoren, bewertet ~30 Aktien nach Bewertung, Qualität, Risiko, Wachstum → Elara Score 0–100. Nutzt Tavily Web-Suche + Groq LLM.
 - **Altair** — Deep-Dive Analyst: DCF-Modell, Szenario-Bewertung (Bull/Base/Worst), Conviction Score 0–7, Timing-Signal (Kaufen/Warten/Nur Watchlist), Pre-Mortem Stresstest. Auch ETF-Analyse.
 
-**Monetarisierung:** Kein SaaS. Nutzer bringen eigenen Groq-API-Key (kostenlos via console.groq.com).
+**Monetarisierung:** Kein SaaS. Kostenlose Nutzung über Server-seitigen GROQ_API_KEY (kein eigener Key notwendig). Nutzer können optional eigene Keys für Premium-Modelle hinterlegen (Claude API, OpenAI, Gemini).
 
 ---
 

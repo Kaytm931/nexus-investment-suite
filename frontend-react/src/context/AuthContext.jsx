@@ -9,14 +9,20 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const [hasApiKey, setHasApiKey] = useState(false)
   const [keyStatusLoading, setKeyStatusLoading] = useState(false)
+  const [keyStatus, setKeyStatus] = useState(null)
 
   const fetchKeyStatus = useCallback(async () => {
     setKeyStatusLoading(true)
     try {
       const status = await getKeyStatus()
-      setHasApiKey(status?.claude || status?.has_claude_key || false)
+      // Logged-in users always have access via server-side GROQ_API_KEY.
+      // Optional personal keys (claude/openai/gemini) are stored separately.
+      setHasApiKey(true)
+      setKeyStatus(status)
     } catch {
-      setHasApiKey(false)
+      // If key status fails, still allow access for logged-in users
+      setHasApiKey(true)
+      setKeyStatus(null)
     } finally {
       setKeyStatusLoading(false)
     }
@@ -25,8 +31,10 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      if (session?.user) {
+      const u = session?.user ?? null
+      setUser(u)
+      setHasApiKey(!!u)  // Access granted for all logged-in users
+      if (u) {
         fetchKeyStatus()
       }
       setLoading(false)
@@ -34,11 +42,13 @@ export function AuthProvider({ children }) {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-      if (session?.user) {
+      const u = session?.user ?? null
+      setUser(u)
+      setHasApiKey(!!u)  // Access granted for all logged-in users
+      if (u) {
         fetchKeyStatus()
       } else {
-        setHasApiKey(false)
+        setKeyStatus(null)
       }
     })
 
@@ -67,6 +77,7 @@ export function AuthProvider({ children }) {
     const { error } = await supabase.auth.signOut()
     if (error) throw error
     setHasApiKey(false)
+    setKeyStatus(null)
   }
 
   const refreshKeyStatus = () => {
@@ -78,6 +89,7 @@ export function AuthProvider({ children }) {
     loading,
     hasApiKey,
     keyStatusLoading,
+    keyStatus,
     signIn,
     signUp,
     signOut,

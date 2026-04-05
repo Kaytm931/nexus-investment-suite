@@ -597,8 +597,11 @@ export default function Home() {
               </button>
             </div>
           ) : indices.length === 0 ? (
-            <div className="rounded-2xl p-8 text-center" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Keine Indexdaten verfügbar</p>
+            <div className="rounded-2xl p-8 text-center space-y-3" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Indexdaten konnten nicht geladen werden</p>
+              <button onClick={loadData} className="btn-secondary text-xs mx-auto">
+                <RefreshCw size={12} /> Erneut versuchen
+              </button>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -630,8 +633,11 @@ export default function Home() {
               ))}
             </div>
           ) : gainers.length === 0 && losers.length === 0 ? (
-            <div className="rounded-2xl p-8 text-center" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Keine Daten verfügbar</p>
+            <div className="rounded-2xl p-8 text-center space-y-3" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Marktdaten konnten nicht geladen werden</p>
+              <button onClick={loadData} className="btn-secondary text-xs mx-auto">
+                <RefreshCw size={12} /> Erneut versuchen
+              </button>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

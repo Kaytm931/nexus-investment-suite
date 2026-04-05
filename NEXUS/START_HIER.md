@@ -4,16 +4,16 @@
 
 ## Navigation
 
-| Datei | Für wen | Zweck |
-|---|---|---|
-| [[DASHBOARD]] | 👤 Nutzer | Projektstatus, was läuft, was als nächstes |
-| [[KONTEXT]] | 🤖 Claude | Vollständiger technischer Stand, Architekturregeln |
-| [[PROBLEME]] | 👥 Beide | Offene Bugs, Einschränkungen, TODOs |
-| [[ROADMAP]] | 👤 Nutzer | Ideen, geplante Features, Prioritäten |
-| [[MUSTER]] | 🤖 Claude | Code-Patterns die immer korrekt sein müssen |
-| [[ENTSCHEIDUNGEN]] | 👥 Beide | Warum wurde was so gebaut |
-| [[CHANGELOG]] | 👥 Beide | Was wurde wann gemacht |
-| [[API]] | 🤖 Claude | Alle Backend-Endpunkte mit Request/Response |
+| Datei              | Für wen   | Zweck                                              |
+| ------------------ | --------- | -------------------------------------------------- |
+| [[DASHBOARD]]      | 👤 Nutzer | Projektstatus, was läuft, was als nächstes         |
+| [[KONTEXT]]        | 🤖 Claude | Vollständiger technischer Stand, Architekturregeln |
+| [[PROBLEME]]       | 👥 Beide  | Offene Bugs, Einschränkungen, TODOs                |
+| [[ROADMAP]]        | 👤 Nutzer | Ideen, geplante Features, Prioritäten              |
+| [[MUSTER]]         | 🤖 Claude | Code-Patterns die immer korrekt sein müssen        |
+| [[ENTSCHEIDUNGEN]] | 👥 Beide  | Warum wurde was so gebaut                          |
+| [[CHANGELOG]]      | 👥 Beide  | Was wurde wann gemacht                             |
+| [[API]]            | 🤖 Claude | Alle Backend-Endpunkte mit Request/Response        |
 
 ## Schnellzugriff
 - [[PROBLEME#🔴 Offen|🔴 Offene Bugs]]

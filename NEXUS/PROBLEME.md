@@ -1,6 +1,6 @@
 # NEXUS — Bug-Tracker & Problemliste
 
-> Letzte Aktualisierung: 2026-04-02
+> Letzte Aktualisierung: 2026-04-05
 
 ---
 
@@ -16,13 +16,19 @@
 
 - [ ] **Analysis.jsx — Regex-Parsing fragil**: `extractReportSections()` splittet per `## Heading`-Regex. Wenn Groq/Altair eine andere Struktur zurückgibt (andere Sprache, andere Heading-Ebene), bleiben alle Sektionen leer. Der Raw-Text Fallback ist vorhanden aber kein eleganter Zustand.
 
-- [ ] **Auth.jsx — Kein "Passwort vergessen"**: Kein Password-Reset-Flow. Nutzer die ihr Passwort vergessen haben sind ausgesperrt. Fix: Supabase `resetPasswordForEmail()` + Formular in Auth.jsx.
+- [x] **Auth.jsx — Kein "Passwort vergessen"**: Kein Password-Reset-Flow. Gelöst 2026-04-05: Link "Passwort vergessen?" unter Login-Button → Reset-View mit E-Mail-Feld + Supabase `resetPasswordForEmail()`. Erfolg/Fehler-Feedback im selben Card.
 
 - [ ] **Settings.jsx — Key-Status nach Reload unklar**: Nach Page-Reload ist nicht sichtbar welche Keys bereits gespeichert sind (nur Test-Status wird gezeigt, keine Key-Vorschau `gsk_****`). Nutzer-Konfusion möglich.
 
+- [x] **Home.jsx — Market Cards leer / kein Retry**: Indexkarten und Mover-Karten zeigten leeren Container ohne Retry-Button wenn Daten fehlten. Gelöst 2026-04-05: Retry-Button in beide leere Zustände eingefügt.
+
+- [x] **Home.jsx — Spark-Daten für Indizes fehlten**: Backend `/api/market/movers` lieferte Indizes ohne `spark`-Feld → Sparkline in `IndexCard` immer leer. Gelöst 2026-04-05: Backend gibt jetzt `spark: [...]` (5d/1h history) zurück.
+
+- [x] **Home.jsx / movers API — yFinance `.info` veraltet und langsam**: `/api/market/movers` nutzte `yf.Ticker().info` für 25 Symbole → Rate-Limits + Timeouts auf Render. Gelöst 2026-04-05: auf `fast_info` + Batch-Fetch umgestellt.
+
 - [ ] **Home.jsx — onMouseEnter Inline-Handler**: `MoverRow`-Komponente in Home.jsx (~Zeile 111) nutzt inline `onMouseEnter/onMouseLeave` mit hardcoded `rgba(79,142,247,0.05)`. Funktioniert, aber inkonsistent mit der Konvention (CSS-Klassen bevorzugt).
 
-- [ ] **Keine Error Boundaries**: Keine einzige `<ErrorBoundary>` in der gesamten App. Wenn eine Komponente einen JS-Fehler wirft (besonders Analysis.jsx mit komplexem Markdown-Parsing), stirbt die gesamte App. Kritisches Risiko für Produktiv-Nutzung.
+- [x] **Keine Error Boundaries**: Keine einzige `<ErrorBoundary>` in der gesamten App. Gelöst 2026-04-05: `ErrorBoundary` Class-Komponente in `App.jsx` — jede Route ist einzeln gewrapped. Zeigt Fehlermeldung + "Erneut versuchen" + "Zur Startseite" ohne App-Crash.
 
 ---
 
@@ -58,7 +64,8 @@
 
 ## ⚠️ Bekannte Einschränkungen (kein Bug, aber wichtig)
 
-- **Groq-Key unter "claude"-Slot**: Historisch bedingt. Backend speichert Groq-Keys unter dem Slot-Namen `"claude"`. NICHT umbenennen — AuthContext und Settings.jsx bauen darauf.
+- **Groq-Key unter "claude"-Slot**: Historisch bedingt. Backend speichert User-eigene Groq-Keys unter dem Slot-Namen `"claude"`. NICHT umbenennen.
+- **Server-Key GROQ_API_KEY ist Pflicht auf Render**: Ohne diesen Env-Var läuft der AI-Service auf Ollama-Fallback. Alle User sind auf diesen Server-Key angewiesen (neues Konzept: kostenlos für alle).
 - **yFinance Ratelimits**: Gibt manchmal `NaN` zurück bei wenig gehandelten Titeln oder nach schnellen aufeinanderfolgenden Requests.
 - **Vercel ↔ Render**: Frontend auf Vercel kann das lokale Backend nicht erreichen. Für vollständige Produktion muss der Render-Service laufen (oder ein anderer deployed Backend-Server).
-- **Supabase Auth nur für Portfolio**: Elara und Altair funktionieren ohne Auth, aber setzen einen gespeicherten API-Key voraus (ApiKeyGate).
+- **Supabase Auth = Pflicht für Elara/Altair**: Seit 2026-04-05 ist Login erforderlich für alle AI-Features (ApiKeyGate zeigt Login-CTA statt Key-CTA).

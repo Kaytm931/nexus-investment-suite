@@ -249,6 +249,20 @@ export default function Screener() {
         </p>
       </div>
 
+      {/* Free-use notice */}
+      <div
+        className="flex items-start gap-3 px-4 py-3 rounded-xl mb-6"
+        style={{ background: 'rgba(124,255,203,0.06)', border: '1px solid rgba(124,255,203,0.15)' }}
+      >
+        <div className="w-2 h-2 rounded-full mt-1 shrink-0" style={{ background: 'var(--accent)', boxShadow: '0 0 6px var(--accent)' }} />
+        <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+          <strong style={{ color: 'var(--text)' }}>Kostenlos & sofort verfügbar.</strong>{' '}
+          Elara läuft über den NEXUS-Server (Groq llama-3.3-70b). Kein eigener API-Key notwendig.
+          Für erweiterte Modelle (GPT-4o, Gemini, Claude) kannst du optional eigene Keys in den{' '}
+          <Link to="/settings" style={{ color: 'var(--primary)' }} className="hover:underline">Einstellungen</Link> hinterlegen.
+        </p>
+      </div>
+
       <ApiKeyGate hasApiKey={hasApiKey}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Form */}

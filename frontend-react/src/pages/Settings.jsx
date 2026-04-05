@@ -7,7 +7,7 @@ import {
 import {
   Key, CheckCircle, XCircle, Loader2, Eye, EyeOff,
   Globe, Shield, User, AlertTriangle, ChevronDown,
-  Zap, Activity, Brain
+  Zap, Activity, Brain, Sparkles
 } from 'lucide-react'
 
 // ─── Status badge ──────────────────────────────────────────────────────────────
@@ -178,6 +178,16 @@ export default function Settings() {
   const [claudeStatus, setClaudeStatus] = useState(null)
   const [claudeMsg,    setClaudeMsg]    = useState('')
 
+  const [openaiKey,    setOpenaiKey]    = useState('')
+  const [openaiSaving, setOpenaiSaving] = useState(false)
+  const [openaiStatus, setOpenaiStatus] = useState(null)
+  const [openaiMsg,    setOpenaiMsg]    = useState('')
+
+  const [geminiKey,    setGeminiKey]    = useState('')
+  const [geminiSaving, setGeminiSaving] = useState(false)
+  const [geminiStatus, setGeminiStatus] = useState(null)
+  const [geminiMsg,    setGeminiMsg]    = useState('')
+
   const [avKey,    setAvKey]    = useState('')
   const [avSaving, setAvSaving] = useState(false)
   const [avStatus, setAvStatus] = useState(null)
@@ -199,6 +209,8 @@ export default function Settings() {
         if (status?.claude)       { setGroqStatus(true); setClaudeStatus(true) }
         if (status?.alphavantage) setAvStatus(true)
         if (status?.tavily)       setTavStatus(true)
+        if (status?.openai)       setOpenaiStatus(true)
+        if (status?.gemini)       setGeminiStatus(true)
       } catch { /* ignore */ }
     }
     init()
@@ -240,6 +252,44 @@ export default function Settings() {
       setClaudeMsg('Gespeichert.'); setClaudeStatus(true); refreshKeyStatus()
     } catch (e) { setClaudeMsg(`Fehler: ${e.message}`) }
     finally { setClaudeSaving(false) }
+  }
+
+  const handleOpenaiTest = async () => {
+    if (!openaiKey.trim()) return
+    setOpenaiSaving(true); setOpenaiMsg('')
+    try {
+      await testApiKey('openai', openaiKey.trim())
+      setOpenaiMsg('Key gültig.'); setOpenaiStatus(true)
+    } catch (e) { setOpenaiMsg(`Fehler: ${e.message}`); setOpenaiStatus(false) }
+    finally { setOpenaiSaving(false) }
+  }
+  const handleOpenaiSave = async () => {
+    if (!openaiKey.trim()) return
+    setOpenaiSaving(true); setOpenaiMsg('')
+    try {
+      await saveApiKey('openai', openaiKey.trim())
+      setOpenaiMsg('Gespeichert.'); setOpenaiStatus(true)
+    } catch (e) { setOpenaiMsg(`Fehler: ${e.message}`) }
+    finally { setOpenaiSaving(false) }
+  }
+
+  const handleGeminiTest = async () => {
+    if (!geminiKey.trim()) return
+    setGeminiSaving(true); setGeminiMsg('')
+    try {
+      await testApiKey('gemini', geminiKey.trim())
+      setGeminiMsg('Key gültig.'); setGeminiStatus(true)
+    } catch (e) { setGeminiMsg(`Fehler: ${e.message}`); setGeminiStatus(false) }
+    finally { setGeminiSaving(false) }
+  }
+  const handleGeminiSave = async () => {
+    if (!geminiKey.trim()) return
+    setGeminiSaving(true); setGeminiMsg('')
+    try {
+      await saveApiKey('gemini', geminiKey.trim())
+      setGeminiMsg('Gespeichert.'); setGeminiStatus(true)
+    } catch (e) { setGeminiMsg(`Fehler: ${e.message}`) }
+    finally { setGeminiSaving(false) }
   }
 
   const handleAvSave = async () => {
@@ -306,19 +356,32 @@ export default function Settings() {
           </h2>
         </div>
         <div className="space-y-2">
-          <ProviderPill active={groqStatus === true}  label="Groq Cloud" model="llama-3.3-70b-versatile" />
-          <ProviderPill active={false} label="Claude API" model={claudeStatus ? 'Konfiguriert' : 'Nicht konfiguriert'} />
+          <ProviderPill active={true} label="Groq Cloud (Standard)" model="llama-3.3-70b-versatile — kostenlos" />
+          <ProviderPill active={claudeStatus === true} label="Claude API (optional)" model={claudeStatus ? 'sk-ant-... konfiguriert' : 'Nicht hinterlegt'} />
+          <ProviderPill active={openaiStatus === true} label="OpenAI API (optional)" model={openaiStatus ? 'sk-... konfiguriert' : 'Nicht hinterlegt'} />
+          <ProviderPill active={geminiStatus === true} label="Gemini API (optional)" model={geminiStatus ? 'AIza... konfiguriert' : 'Nicht hinterlegt'} />
         </div>
       </div>
 
       {/* Groq */}
-      <Section icon={Zap} title="Groq Cloud API — Aktiver Provider" badge={<StatusBadge ok={groqStatus} />} accent>
+      <Section icon={Zap} title="Groq Cloud API — Aktiver Provider" badge={<StatusBadge ok={true} label="Aktiv" />} accent>
+        <div
+          className="flex items-start gap-3 px-4 py-3 rounded-xl"
+          style={{ background: 'rgba(124,255,203,0.06)', border: '1px solid rgba(124,255,203,0.15)' }}
+        >
+          <div className="w-2 h-2 rounded-full mt-1 shrink-0" style={{ background: 'var(--accent)', boxShadow: '0 0 6px var(--accent)' }} />
+          <p className="text-xs leading-relaxed" style={{ color: 'var(--text)' }}>
+            <strong>Kostenlos & sofort nutzbar.</strong>{' '}
+            <span style={{ color: 'var(--text-muted)' }}>
+              Elara und Altair laufen über den NEXUS-Server-Key auf Groq (llama-3.3-70b). Kein eigener Key notwendig.
+            </span>
+          </p>
+        </div>
         <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-          Elara und Altair nutzen <strong style={{ color: 'var(--text)' }}>Groq llama-3.3-70b</strong> für
-          schnelle Deep-Dive Analysen. Trage deinen Groq API-Key ein.
+          Optional: Eigenen Groq-Key hinterlegen, um Rate-Limits des Shared-Keys zu umgehen.
         </p>
         <div>
-          <label className="label">Groq API-Key</label>
+          <label className="label">Eigener Groq API-Key (optional)</label>
           <SecretInput value={groqKey} onChange={setGroqKey} placeholder="gsk_..." disabled={groqSaving} />
         </div>
         {groqMsg && <p className="text-xs" style={{ color: groqStatus ? 'var(--success)' : 'var(--danger)' }}>{groqMsg}</p>}
@@ -367,6 +430,69 @@ export default function Settings() {
           <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer" style={linkStyle} className="hover:underline">
             console.anthropic.com
           </a>
+        </p>
+      </CollapsibleSection>
+
+      {/* OpenAI */}
+      <CollapsibleSection
+        icon={Sparkles}
+        title="OpenAI API — Premium-Modelle (optional)"
+        badge={openaiStatus ? <StatusBadge ok={true} label="Konfiguriert" /> : null}
+      >
+        <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+          Schaltet <strong style={{ color: 'var(--text)' }}>GPT-4o und o1</strong> als alternative KI-Provider frei.
+          Eigener Key über OpenAI Platform.
+        </p>
+        <div>
+          <label className="label">OpenAI API-Key</label>
+          <SecretInput value={openaiKey} onChange={setOpenaiKey} placeholder="sk-proj-..." disabled={openaiSaving} />
+        </div>
+        {openaiMsg && <p className="text-xs" style={{ color: openaiStatus ? 'var(--success)' : 'var(--danger)' }}>{openaiMsg}</p>}
+        <div className="flex gap-2">
+          <button className="btn-secondary text-xs" onClick={handleOpenaiTest} disabled={openaiSaving || !openaiKey.trim()}>
+            {openaiSaving && <Loader2 size={13} className="animate-spin" />} Testen
+          </button>
+          <button className="btn-primary text-xs" onClick={handleOpenaiSave} disabled={openaiSaving || !openaiKey.trim()}>
+            {openaiSaving && <Loader2 size={13} className="animate-spin" />} Speichern
+          </button>
+        </div>
+        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+          Key holen:{' '}
+          <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" style={linkStyle} className="hover:underline">
+            platform.openai.com
+          </a>
+        </p>
+      </CollapsibleSection>
+
+      {/* Gemini */}
+      <CollapsibleSection
+        icon={Brain}
+        title="Gemini API — Google AI (optional)"
+        badge={geminiStatus ? <StatusBadge ok={true} label="Konfiguriert" /> : null}
+      >
+        <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+          Schaltet <strong style={{ color: 'var(--text)' }}>Gemini 2.5 Pro</strong> als optionalen Provider frei.
+          Kostenloser Tarif verfügbar via Google AI Studio.
+        </p>
+        <div>
+          <label className="label">Gemini API-Key</label>
+          <SecretInput value={geminiKey} onChange={setGeminiKey} placeholder="AIzaSy..." disabled={geminiSaving} />
+        </div>
+        {geminiMsg && <p className="text-xs" style={{ color: geminiStatus ? 'var(--success)' : 'var(--danger)' }}>{geminiMsg}</p>}
+        <div className="flex gap-2">
+          <button className="btn-secondary text-xs" onClick={handleGeminiTest} disabled={geminiSaving || !geminiKey.trim()}>
+            {geminiSaving && <Loader2 size={13} className="animate-spin" />} Testen
+          </button>
+          <button className="btn-primary text-xs" onClick={handleGeminiSave} disabled={geminiSaving || !geminiKey.trim()}>
+            {geminiSaving && <Loader2 size={13} className="animate-spin" />} Speichern
+          </button>
+        </div>
+        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+          Key holen:{' '}
+          <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" style={linkStyle} className="hover:underline">
+            aistudio.google.com
+          </a>
+          {' '}— Kostenloser Tarif verfügbar.
         </p>
       </CollapsibleSection>
 

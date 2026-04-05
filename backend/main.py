@@ -1270,36 +1270,74 @@ _MOVER_WATCHLIST = [
 
 @app.get("/api/market/movers")
 async def get_market_movers():
-    """Return biggest intraday movers from watchlist + major index values."""
+    """Return biggest intraday movers from watchlist + major index values with sparklines."""
     loop = asyncio.get_event_loop()
+
+    def _get_price_change(ticker_obj):
+        """Use fast_info for price data — much faster than .info."""
+        try:
+            fi = ticker_obj.fast_info
+            prev = getattr(fi, "previous_close", None) or 0
+            curr = getattr(fi, "last_price", None) or getattr(fi, "regular_market_price", None) or prev
+            return float(prev), float(curr)
+        except Exception:
+            return 0.0, 0.0
 
     def _fetch():
         import yfinance as yf
+
+        # Fetch movers in batch using download for speed
         movers = []
-        for sym in _MOVER_WATCHLIST:
-            try:
-                info = yf.Ticker(sym).info
-                prev = info.get("previousClose") or 0
-                curr = info.get("currentPrice") or info.get("regularMarketPrice") or prev
-                if not curr or not prev or prev == 0:
+        batch_data = {}
+        try:
+            tickers_obj = yf.Tickers(" ".join(_MOVER_WATCHLIST))
+            for sym in _MOVER_WATCHLIST:
+                try:
+                    t = tickers_obj.tickers.get(sym)
+                    if not t:
+                        continue
+                    prev, curr = _get_price_change(t)
+                    if not curr or not prev or prev == 0:
+                        continue
+                    change = (curr / prev - 1) * 100
+                    # shortName via fast_info if available, else sym
+                    name = getattr(t.fast_info, "exchange", None) and sym or sym
+                    try:
+                        name = t.info.get("shortName") or t.info.get("longName") or sym
+                    except Exception:
+                        name = sym
+                    movers.append({
+                        "ticker": sym,
+                        "name": name,
+                        "price": round(curr, 2),
+                        "change": round(change, 2),
+                    })
+                except Exception:
                     continue
-                change = (curr / prev - 1) * 100
-                movers.append({
-                    "ticker": sym,
-                    "name": info.get("shortName") or info.get("longName") or sym,
-                    "price": round(curr, 2),
-                    "change": round(change, 2),
-                    "sector": info.get("sector", ""),
-                })
-            except Exception:
-                continue
+        except Exception:
+            # Fallback: individual fetches
+            for sym in _MOVER_WATCHLIST[:15]:
+                try:
+                    t = yf.Ticker(sym)
+                    prev, curr = _get_price_change(t)
+                    if not curr or not prev or prev == 0:
+                        continue
+                    change = (curr / prev - 1) * 100
+                    movers.append({
+                        "ticker": sym,
+                        "name": sym,
+                        "price": round(curr, 2),
+                        "change": round(change, 2),
+                    })
+                except Exception:
+                    continue
 
         movers.sort(key=lambda x: x["change"], reverse=True)
         gainers = [m for m in movers if m["change"] > 0][:5]
         losers = [m for m in movers if m["change"] < 0][-5:]
         losers.sort(key=lambda x: x["change"])
 
-        # Index snapshot
+        # Index snapshot with sparkline (5d hourly)
         indices = []
         for symbol, name, display in [
             ("^GDAXI", "DAX", "DAX"),
@@ -1307,16 +1345,28 @@ async def get_market_movers():
             ("IWDA.L", "MSCI World", "MSCIW"),
         ]:
             try:
-                info = yf.Ticker(symbol).info
-                prev = info.get("previousClose") or 0
-                curr = info.get("currentPrice") or info.get("regularMarketPrice") or prev
-                if curr and prev:
-                    indices.append({
-                        "symbol": display,
-                        "name": name,
-                        "price": round(curr, 2),
-                        "change": round((curr / prev - 1) * 100, 2),
-                    })
+                t = yf.Ticker(symbol)
+                prev, curr = _get_price_change(t)
+                if not curr or not prev:
+                    continue
+                change = round((curr / prev - 1) * 100, 2) if prev else 0.0
+
+                # Sparkline: last 5 days hourly closes
+                spark = []
+                try:
+                    hist = t.history(period="5d", interval="1h")
+                    if not hist.empty:
+                        spark = [round(float(v), 2) for v in hist["Close"].dropna().tolist()]
+                except Exception:
+                    pass
+
+                indices.append({
+                    "symbol": display,
+                    "name": name,
+                    "price": round(curr, 2),
+                    "change": change,
+                    "spark": spark,
+                })
             except Exception:
                 continue
 
@@ -1338,6 +1388,8 @@ def _load_secrets() -> dict:
         "ollama_url": cfg.get("ollama_base_url", "http://localhost:11434"),
         "ollama_model": cfg.get("ollama_model", "gemma3:27b"),
         "tavily_key": cfg.get("tavily_api_key", ""),
+        "openai_key": cfg.get("openai_api_key", ""),
+        "gemini_key": cfg.get("gemini_api_key", ""),
     }
 
 def _save_config_field(key: str, value: str):
@@ -1350,6 +1402,7 @@ async def get_key_status():
     """Return which API keys are configured (without exposing the values)."""
     s = _load_secrets()
     tavily_ok = bool(s["tavily_key"] and s["tavily_key"] not in ("", "YOUR_TAVILY_API_KEY_HERE"))
+    groq_env_ok = bool(os.environ.get("GROQ_API_KEY", "").strip())
     return {
         "claude": bool(s["claude_key"]),
         "alphavantage": bool(s["alphavantage_key"]),
@@ -1357,6 +1410,9 @@ async def get_key_status():
         "tavily": tavily_ok,
         "ollama_url": s["ollama_url"],
         "ollama_model": s["ollama_model"],
+        "groq_env": groq_env_ok,
+        "openai": bool(s.get("openai_key", "")),
+        "gemini": bool(s.get("gemini_key", "")),
     }
 
 @app.post("/api/keys/test")
@@ -1387,6 +1443,35 @@ async def test_key(data: dict):
             if resp.status_code == 200:
                 return {"valid": True, "provider": "claude"}
             raise HTTPException(status_code=400, detail=f"Claude Key ungültig: HTTP {resp.status_code}")
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Verbindungsfehler: {str(e)}")
+    elif provider == "openai":
+        import httpx
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                resp = await client.get(
+                    "https://api.openai.com/v1/models",
+                    headers={"Authorization": f"Bearer {key}"},
+                )
+            if resp.status_code == 200:
+                return {"valid": True, "provider": "openai"}
+            raise HTTPException(status_code=400, detail=f"OpenAI Key ungültig: HTTP {resp.status_code}")
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Verbindungsfehler: {str(e)}")
+    elif provider == "gemini":
+        import httpx
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                resp = await client.get(
+                    f"https://generativelanguage.googleapis.com/v1beta/models?key={key}",
+                )
+            if resp.status_code == 200:
+                return {"valid": True, "provider": "gemini"}
+            raise HTTPException(status_code=400, detail=f"Gemini Key ungültig: HTTP {resp.status_code}")
         except HTTPException:
             raise
         except Exception as e:
@@ -1432,6 +1517,8 @@ async def save_key(provider: str, data: dict):
         "claude": "claude_api_key",
         "tavily": "tavily_api_key",
         "alphavantage": "alphavantage_api_key",
+        "openai": "openai_api_key",
+        "gemini": "gemini_api_key",
     }
     config_key = mapping.get(provider.lower())
     if not config_key:

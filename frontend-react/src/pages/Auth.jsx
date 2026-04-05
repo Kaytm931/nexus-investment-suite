@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { TrendingUp, Eye, EyeOff, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
+import { supabase } from '../lib/supabase'
+import { TrendingUp, Eye, EyeOff, Loader2, CheckCircle, AlertCircle, ArrowLeft, Mail } from 'lucide-react'
 
 export default function Auth() {
   const { user, signIn, signUp } = useAuth()
@@ -13,6 +14,7 @@ export default function Auth() {
   const [success, setSuccess] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
+  const [showReset, setShowReset] = useState(false)
 
   const from = location.state?.from?.pathname || '/portfolio'
 
@@ -25,6 +27,9 @@ export default function Auth() {
   const [regEmail, setRegEmail] = useState('')
   const [regPassword, setRegPassword] = useState('')
   const [regConfirm, setRegConfirm] = useState('')
+
+  // Reset form state
+  const [resetEmail, setResetEmail] = useState('')
 
   useEffect(() => {
     if (user) navigate(from, { replace: true })
@@ -67,6 +72,38 @@ export default function Auth() {
     }
   }
 
+  const handleReset = async (e) => {
+    e.preventDefault()
+    if (!resetEmail.trim()) return
+    setError('')
+    setSuccess('')
+    setLoading(true)
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(resetEmail.trim(), {
+        redirectTo: `${window.location.origin}/auth`,
+      })
+      if (resetError) throw resetError
+      setSuccess('E-Mail gesendet! Prüfe deinen Posteingang und klicke auf den Reset-Link.')
+    } catch (err) {
+      setError(err.message || 'Reset fehlgeschlagen. Bitte überprüfe die E-Mail-Adresse.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const openReset = () => {
+    setShowReset(true)
+    setResetEmail(loginEmail) // pre-fill from login field if already typed
+    setError('')
+    setSuccess('')
+  }
+
+  const closeReset = () => {
+    setShowReset(false)
+    setError('')
+    setSuccess('')
+  }
+
   return (
     <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
@@ -80,23 +117,25 @@ export default function Auth() {
         </div>
 
         <div className="card">
-          {/* Tab toggle */}
-          <div className="flex border-b border-border">
-            <button
-              onClick={() => { setTab('login'); setError(''); setSuccess('') }}
-              className={`flex-1 py-3.5 text-sm font-medium transition-colors ${tab === 'login' ? 'border-b-2 border-primary' : ''}`}
-              style={{ color: tab === 'login' ? 'var(--primary)' : 'var(--text-muted)' }}
-            >
-              Anmelden
-            </button>
-            <button
-              onClick={() => { setTab('register'); setError(''); setSuccess('') }}
-              className={`flex-1 py-3.5 text-sm font-medium transition-colors ${tab === 'register' ? 'border-b-2 border-primary' : ''}`}
-              style={{ color: tab === 'register' ? 'var(--primary)' : 'var(--text-muted)' }}
-            >
-              Registrieren
-            </button>
-          </div>
+          {/* Tab toggle — hidden when showing reset view */}
+          {!showReset && (
+            <div className="flex border-b border-border">
+              <button
+                onClick={() => { setTab('login'); setError(''); setSuccess('') }}
+                className={`flex-1 py-3.5 text-sm font-medium transition-colors ${tab === 'login' ? 'border-b-2 border-primary' : ''}`}
+                style={{ color: tab === 'login' ? 'var(--primary)' : 'var(--text-muted)' }}
+              >
+                Anmelden
+              </button>
+              <button
+                onClick={() => { setTab('register'); setError(''); setSuccess('') }}
+                className={`flex-1 py-3.5 text-sm font-medium transition-colors ${tab === 'register' ? 'border-b-2 border-primary' : ''}`}
+                style={{ color: tab === 'register' ? 'var(--primary)' : 'var(--text-muted)' }}
+              >
+                Registrieren
+              </button>
+            </div>
+          )}
 
           <div className="p-6">
             {/* Alerts */}
@@ -113,7 +152,59 @@ export default function Auth() {
               </div>
             )}
 
-            {tab === 'login' ? (
+            {/* ── Reset-Passwort-View ───────────────────────────────────── */}
+            {showReset ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <button
+                    type="button"
+                    onClick={closeReset}
+                    className="flex items-center gap-1.5 text-xs transition-colors"
+                    style={{ color: 'var(--text-muted)' }}
+                    onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+                  >
+                    <ArrowLeft size={13} /> Zurück zur Anmeldung
+                  </button>
+                </div>
+                <div className="flex items-center gap-2 mb-1">
+                  <div
+                    className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                    style={{ background: 'rgba(79,142,247,0.12)' }}
+                  >
+                    <Mail size={14} style={{ color: 'var(--primary)' }} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Passwort zurücksetzen</p>
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Wir senden dir einen Reset-Link per E-Mail</p>
+                  </div>
+                </div>
+                <form onSubmit={handleReset} className="space-y-4 pt-2">
+                  <div>
+                    <label className="label">E-Mail-Adresse</label>
+                    <input
+                      type="email"
+                      value={resetEmail}
+                      onChange={e => setResetEmail(e.target.value)}
+                      className="input-field"
+                      placeholder="deine@email.de"
+                      required
+                      autoComplete="email"
+                      autoFocus
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={loading || !resetEmail.trim()}
+                    className="btn-primary w-full justify-center py-2.5"
+                  >
+                    {loading && <Loader2 size={16} className="animate-spin" />}
+                    {loading ? 'Sende E-Mail…' : 'Reset-Link senden'}
+                  </button>
+                </form>
+              </div>
+            ) : tab === 'login' ? (
+            /* ── Login-View ───────────────────────────────────────────── */
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>
                   <label className="label">E-Mail-Adresse</label>
@@ -156,6 +247,18 @@ export default function Auth() {
                   {loading && <Loader2 size={16} className="animate-spin" />}
                   {loading ? 'Anmeldung…' : 'Anmelden'}
                 </button>
+                <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={openReset}
+                    className="text-xs transition-colors"
+                    style={{ color: 'var(--text-muted)' }}
+                    onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+                  >
+                    Passwort vergessen?
+                  </button>
+                </div>
               </form>
             ) : (
               <form onSubmit={handleRegister} className="space-y-4">
@@ -238,10 +341,12 @@ export default function Auth() {
               </form>
             )}
 
-            <p className="text-xs text-center mt-4 leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-              Mit der Registrierung stimmst du zu, dass NEXUS keine Anlageberatung bietet.
-              Alle Analysen dienen ausschließlich zu Informationszwecken.
-            </p>
+            {!showReset && (
+              <p className="text-xs text-center mt-4 leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+                Mit der Registrierung stimmst du zu, dass NEXUS keine Anlageberatung bietet.
+                Alle Analysen dienen ausschließlich zu Informationszwecken.
+              </p>
+            )}
           </div>
         </div>
 

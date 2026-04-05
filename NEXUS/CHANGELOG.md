@@ -4,6 +4,34 @@
 
 ---
 
+## 2026-04-05 — Error Boundaries + Passwort-Reset
+
+- `App.jsx` — `ErrorBoundary` Class-Komponente hinzugefügt. Jede Route einzeln gewrapped (`/`, `/auth`, `/screener`, `/analyse`, `/portfolio`, `/settings`). Bei Render-Fehler: Fallback-UI mit Fehlermeldung, "Erneut versuchen" + "Zur Startseite" — kein App-Crash mehr.
+- `Auth.jsx` — "Passwort vergessen?"-Link unter dem Login-Button. Zeigt Reset-View (Mail-Icon, E-Mail-Feld, Submit). Nutzt `supabase.resetPasswordForEmail()` mit `redirectTo: origin/auth`. Pre-füllt E-Mail aus Login-Feld wenn schon eingetippt. Zurück-Link wechselt zurück zur Anmeldung.
+
+**Build:** ✅ 1022 kB (kein neuer Bug)
+
+---
+
+## 2026-04-05 — Freies Nutzungsmodell + OpenAI/Gemini Keys + Market Cards Fix
+
+**Aufgabe A — Konzept-Umbau: Freie Nutzung + optionale eigene Keys**
+
+- `AuthContext.jsx` — `hasApiKey` ist jetzt `true` für alle eingeloggten User (Server-Key GROQ_API_KEY ist immer verfügbar). `keyStatus`-Objekt wird zusätzlich im Context bereitgestellt für Details zu optionalen Keys.
+- `ApiKeyGate.jsx` — Gate-Message geändert: nicht mehr "API-Key erforderlich" sondern "Anmeldung erforderlich". Icon: `LogIn` statt `KeyRound`. CTA → `/auth` statt `/settings`.
+- `Settings.jsx` — Groq-Sektion: Hinweis "kostenlos & sofort verfügbar" + optional eigenen Key hinterlegen. Neue Sektionen: **OpenAI API** + **Gemini API** (beide als CollapsibleSection, mit Test- und Speichern-Button). Provider-Status-Block zeigt jetzt alle 4 Provider.
+- `backend/main.py` — `/api/keys/status` gibt jetzt zusätzlich `groq_env`, `openai`, `gemini` zurück. `_load_secrets()` enthält `openai_key` + `gemini_key`. `save_key` mapping um `openai` + `gemini` erweitert. `/api/keys/test` unterstützt jetzt `openai` (GET /v1/models) und `gemini` (GET /v1beta/models) Test.
+- `Screener.jsx` + `Analysis.jsx` — Gratis-Info-Banner: "Kostenlos & sofort verfügbar. Kein eigener API-Key notwendig."
+
+**Aufgabe B — Market Cards Fix (Home.jsx)**
+
+- `backend/main.py` — `/api/market/movers` vollständig überarbeitet: `yf.Ticker().info` (veraltet, langsam) → `fast_info` für Preisdaten. Batch-Fetch via `yf.Tickers()`. Indizes erhalten jetzt `spark`-Feld (5d/1h history) für Sparklines in `IndexCard`.
+- `Home.jsx` — Leere Zustände bei Indizes und Mover erhalten Retry-Button (vorher nur statischer Text).
+
+**Build:** `npm run build` ✅ — 1017 kB (Bundle-Warning bereits bekannt, kein neuer Bug)
+
+---
+
 ## 2026-04-03 — Bugfixes Phase 1 + Vault-Neuaufbau
 
 **Git-Commit:** `1647445`
