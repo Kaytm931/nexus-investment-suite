@@ -1,6 +1,6 @@
 # NEXUS Investment Suite — Vollständiger Projektkontext
 
-> Letzte Aktualisierung: 2026-04-07 | Stand: WS-Fix + Recovery-Flow + Cold-Start-UX + NaN-Guards + Design Quick Wins
+> Letzte Aktualisierung: 2026-04-07 | Stand: WS-Fix + Recovery-Flow + Cold-Start-UX + NaN-Guards + Design Quick Wins + AI Chat + GSAP Refactor
 
 ---
 
@@ -92,9 +92,10 @@ Ziel: Research-Qualität wie professionelle Analysten — kostenlos, BYOK (Bring
 | `/analyse` | `pages/Analysis.jsx` | ✅ | Altair: TickerSearch, WebSocket-Progress, Conviction Gauge, DCF Chart, Markdown-Sektionen |
 | `/portfolio` | `pages/Portfolio.jsx` | ✅ | CRUD Positionen, Modal, Sortierung, Performance vs. Benchmark |
 | `/settings` | `pages/Settings.jsx` | ✅ | Groq / Claude / Tavily / AlphaVantage Keys, Test-Buttons, Health-Check |
+| `/chat` | `pages/Chat.jsx` | ✅ | KI-Assistent: Streaming SSE via Groq, localStorage-Verlauf, Suggested Prompts, Split-Layout |
 | `*` | `App.jsx` | ✅ | Catch-all → redirect `/` |
 
-**ProtectedRoutes:** `/screener`, `/analyse`, `/portfolio`, `/settings` → redirect `/auth` wenn kein User
+**ProtectedRoutes:** `/screener`, `/analyse`, `/portfolio`, `/settings`, `/chat` → redirect `/auth` wenn kein User
 
 ---
 
@@ -102,7 +103,7 @@ Ziel: Research-Qualität wie professionelle Analysten — kostenlos, BYOK (Bring
 
 | Datei | Status | Beschreibung |
 |---|---|---|
-| `components/Header.jsx` | ✅ | Sticky Nav, Scroll-aware Glassmorphism, Backend-Health Badge (inkl. Cold-Start Spinner + 5s-Retry bis 60s), User-Dropdown, Mobile Hamburger |
+| `components/Header.jsx` | ✅ | Sticky Nav, Scroll-aware Glassmorphism, Backend-Health Badge (inkl. Cold-Start Spinner + 5s-Retry bis 60s), User-Dropdown mit Fade+Scale Animation, Mobile Hamburger, /chat Sparkles-Icon |
 | `components/ApiKeyGate.jsx` | ✅ | Blur-Overlay + Hinweis wenn kein API-Key gesetzt (`hasApiKey` aus AuthContext) |
 | `components/ConvictionGauge.jsx` | ✅ | SVG Arc Gauge 0–7, GSAP Counter + Arc-Animation, `useGSAP()` |
 | `components/StockChart.jsx` | ✅ | Recharts Area/Line Chart, dark-styled, Optional Area-Füllung |
