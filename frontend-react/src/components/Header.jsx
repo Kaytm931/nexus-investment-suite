@@ -203,7 +203,7 @@ export default function Header() {
 
                 {userMenuOpen && (
                   <div
-                    className="absolute right-0 mt-2 w-52 rounded-2xl py-1.5 z-50 overflow-hidden"
+                    className="absolute right-0 mt-2 w-52 rounded-2xl py-1.5 z-50 overflow-hidden dropdown-enter"
                     style={{
                       background: 'var(--surface-2)',
                       border: '1px solid var(--border)',
