@@ -140,6 +140,52 @@ export async function saveAlphaVantageKey(key) {
   })
 }
 
+// ── Chat (streaming SSE) ─────────────────────────────────────────────────────
+
+/**
+ * Stream a chat response. Calls onDelta(text) per chunk, onDone() when finished.
+ * Returns an AbortController for cancellation.
+ */
+export async function chatStream(messages, { onDelta, onDone, onError } = {}) {
+  const ctrl = new AbortController()
+  const headers = await getAuthHeaders()
+  try {
+    const res = await fetch(`${API_BASE}/api/chat`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ messages }),
+      signal: ctrl.signal,
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }))
+      throw new Error(err.detail || `Chat Error ${res.status}`)
+    }
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() ?? ''
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue
+        const raw = line.slice(6)
+        if (raw === '[DONE]') { onDone?.(); return ctrl }
+        try {
+          const { delta } = JSON.parse(raw)
+          if (delta) onDelta?.(delta)
+        } catch {}
+      }
+    }
+    onDone?.()
+  } catch (err) {
+    if (err.name !== 'AbortError') onError?.(err)
+  }
+  return ctrl
+}
+
 // ── Health Check ─────────────────────────────────────────────────────────────
 
 export async function checkHealth() {

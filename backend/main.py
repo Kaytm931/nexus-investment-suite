@@ -18,7 +18,7 @@ load_dotenv()
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Header, Depends
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -1403,3 +1403,88 @@ async def save_key(provider: str, data: dict):
         await search_service.init()
 
     return {"success": True, "provider": provider}
+
+# ── Chat endpoint (general investment assistant, SSE streaming) ────────────────
+
+CHAT_SYSTEM_PROMPT = """Du bist der NEXUS Assistent — ein präziser, sachkundiger Gesprächspartner für Finanz- und Investmentthemen.
+
+Dein Charakter:
+- Erkläre Finanzkonzepte klar und verständlich, ohne Fachjargon zu vermeiden
+- Beziehe dich auf bewährte Investment-Prinzipien (Value Investing, DCF, Diversifikation)
+- Verweise bei komplexen Aktienanalysen auf die NEXUS-Analyse-Tools (Elara/Altair)
+- Sei präzise, aber menschlich — du bist ein Assistent, kein Lexikon
+
+WICHTIG: Du bist kein Finanzberater. Weise bei konkreten Kauf-/Verkaufs-Empfehlungen stets darauf hin, dass Anlageentscheidungen individuell und nach eigener Prüfung getroffen werden müssen.
+
+Antworte immer auf Deutsch, außer der Nutzer spricht eine andere Sprache."""
+
+class ChatMessage:
+    def __init__(self, role: str, content: str):
+        self.role = role
+        self.content = content
+
+@app.post("/api/chat")
+async def chat_stream(data: dict):
+    """
+    General investment assistant chat with SSE streaming.
+    Accepts: {"messages": [{"role": "user"|"assistant", "content": "..."}]}
+    Returns: text/event-stream with data: {"delta": "..."} chunks
+    """
+    messages = data.get("messages", [])
+    if not messages:
+        raise HTTPException(status_code=400, detail="Keine Nachrichten angegeben")
+
+    groq_key = os.environ.get("GROQ_API_KEY", "").strip()
+    if not groq_key:
+        raise HTTPException(status_code=503, detail="KI-Service nicht verfügbar (kein Groq API Key)")
+
+    full_messages = [{"role": "system", "content": CHAT_SYSTEM_PROMPT}] + [
+        {"role": m["role"], "content": m["content"]}
+        for m in messages
+        if m.get("role") in ("user", "assistant") and m.get("content")
+    ]
+
+    async def generate():
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            async with client.stream(
+                "POST",
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {groq_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": "llama-3.3-70b-versatile",
+                    "messages": full_messages,
+                    "stream": True,
+                    "temperature": 0.65,
+                    "max_tokens": 2048,
+                },
+            ) as response:
+                if response.status_code != 200:
+                    body = await response.aread()
+                    yield f"data: {json.dumps({'error': f'Groq error {response.status_code}'})}\n\n"
+                    return
+                async for line in response.aiter_lines():
+                    if not line.startswith("data: "):
+                        continue
+                    raw = line[6:]
+                    if raw == "[DONE]":
+                        yield "data: [DONE]\n\n"
+                        return
+                    try:
+                        chunk = json.loads(raw)
+                        delta = chunk["choices"][0]["delta"].get("content", "")
+                        if delta:
+                            yield f"data: {json.dumps({'delta': delta})}\n\n"
+                    except Exception:
+                        pass
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )

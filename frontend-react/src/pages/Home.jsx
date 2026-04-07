@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useLayoutEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { fetchMarketMovers } from '../lib/api'
 import StockChart from '../components/StockChart'
 import { gsap } from 'gsap'
+import { useGSAP } from '@gsap/react'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import {
   TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight,
@@ -11,6 +12,21 @@ import {
 } from 'lucide-react'
 
 gsap.registerPlugin(ScrollTrigger)
+
+// ─── CountUp ──────────────────────────────────────────────────────────────────
+function CountUp({ target, duration = 1.4, delay = 1.1, suffix = '' }) {
+  const [val, setVal] = useState(0)
+  const elRef = useRef(null)
+  useGSAP(() => {
+    const obj = { n: 0 }
+    gsap.to(obj, {
+      n: target, duration, delay,
+      ease: 'power2.out',
+      onUpdate: () => setVal(Math.round(obj.n)),
+    })
+  }, { scope: elRef })
+  return <span ref={elRef}>{val}{suffix}</span>
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function deriveExchange(symbol) {
@@ -169,7 +185,7 @@ function HeroVisual() {
   ]
   const path = 'M0,55 C20,50 35,52 50,38 C65,24 75,30 90,20 C105,10 118,14 132,9 C146,4 158,6 172,3 C186,0 200,2 220,1 L240,0'
   return (
-    <div className="hero-visual relative hidden lg:block select-none">
+    <div className="hero-visual relative hidden md:block select-none">
       {/* Floating badge top-right */}
       <div
         className="absolute -top-3 -right-3 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold"
@@ -414,21 +430,18 @@ export default function Home() {
   const ctaRef = useRef(null)
 
   // Hero entrance
-  useLayoutEffect(() => {
-    const ctx = gsap.context(() => {
-      const tl = gsap.timeline({ defaults: { ease: 'power3.out' } })
-      tl.from('.hero-badge', { opacity: 0, y: -20, duration: 0.5 })
-        .from('.hero-line', { opacity: 0, y: 60, duration: 0.8, stagger: 0.12 }, '-=0.2')
-        .from('.hero-sub',  { opacity: 0, y: 24, duration: 0.6 }, '-=0.35')
-        .from('.hero-cta',  { opacity: 0, y: 20, duration: 0.5, stagger: 0.1 }, '-=0.3')
-        .from('.hero-stat', { opacity: 0, scale: 0.85, duration: 0.5, stagger: 0.08, ease: 'back.out(1.4)' }, '-=0.25')
-        .from('.hero-visual', { opacity: 0, x: 40, duration: 0.9, ease: 'power2.out' }, '-=0.7')
-    }, heroRef)
-    return () => ctx.revert()
-  }, [])
+  useGSAP(() => {
+    const tl = gsap.timeline({ defaults: { ease: 'power3.out' } })
+    tl.from('.hero-badge', { opacity: 0, y: -20, duration: 0.5 })
+      .from('.hero-line', { opacity: 0, y: 60, duration: 0.8, stagger: 0.12 }, '-=0.2')
+      .from('.hero-sub',  { opacity: 0, y: 24, duration: 0.6 }, '-=0.35')
+      .from('.hero-cta',  { opacity: 0, y: 20, duration: 0.5, stagger: 0.1 }, '-=0.3')
+      .from('.hero-stat', { opacity: 0, scale: 0.85, duration: 0.5, stagger: 0.08, ease: 'back.out(1.4)' }, '-=0.25')
+      .from('.hero-visual', { opacity: 0, x: 40, duration: 0.9, ease: 'power2.out' }, '-=0.7')
+  }, { scope: heroRef })
 
-  // Market cards stagger
-  useEffect(() => {
+  // Market cards stagger on data load
+  useGSAP(() => {
     if (loading) return
     const cards = marketRef.current?.querySelectorAll('.index-card')
     if (!cards?.length) return
@@ -436,12 +449,11 @@ export default function Home() {
       { opacity: 0, y: 32 },
       { opacity: 1, y: 0, duration: 0.55, stagger: 0.1, ease: 'power2.out' }
     )
-  }, [loading, indices.length])
+  }, { scope: marketRef, dependencies: [loading, indices.length] })
 
-  // ScrollTrigger: feature cards
-  useLayoutEffect(() => {
-    const cards = document.querySelectorAll('.feature-card')
-    cards.forEach((card, i) => {
+  // ScrollTrigger: feature cards + CTA
+  useGSAP(() => {
+    document.querySelectorAll('.feature-card').forEach((card, i) => {
       gsap.from(card, {
         scrollTrigger: { trigger: card, start: 'top 85%', once: true },
         opacity: 0,
@@ -450,7 +462,6 @@ export default function Home() {
         ease: 'power2.out',
       })
     })
-    // CTA
     gsap.from('.cta-section', {
       scrollTrigger: { trigger: '.cta-section', start: 'top 90%', once: true },
       opacity: 0,
@@ -458,7 +469,6 @@ export default function Home() {
       duration: 0.7,
       ease: 'power2.out',
     })
-    return () => ScrollTrigger.getAll().forEach(t => t.kill())
   }, [])
 
   const loadData = async () => {
@@ -550,7 +560,7 @@ export default function Home() {
               className="leading-none tracking-tight"
               style={{
                 fontFamily: "'Boska', Georgia, serif",
-                fontWeight: 900,
+                fontWeight: 300,
                 fontSize: 'clamp(2.6rem, 6.5vw, 5.5rem)',
               }}
             >
@@ -636,17 +646,17 @@ export default function Home() {
           {/* Stats */}
           <div className="flex flex-wrap gap-8 sm:gap-14">
             {[
-              { value: '14',  label: 'Sektoren' },
+              { value: null,  countTo: 14, label: 'Sektoren' },
               { value: '0–7', label: 'Conviction Score' },
               { value: 'DCF', label: 'Bewertungsmodell' },
               { value: 'Live', label: 'KI-Analyse' },
-            ].map(({ value, label }) => (
+            ].map(({ value, countTo, label }) => (
               <div key={label} className="hero-stat">
                 <p
                   className="text-3xl font-bold tabular"
                   style={{ fontFamily: "'Boska', serif", color: 'var(--text)' }}
                 >
-                  {value}
+                  {countTo != null ? <CountUp target={countTo} /> : value}
                 </p>
                 <p
                   className="text-[10px] uppercase tracking-widest mt-1"
@@ -952,13 +962,6 @@ export default function Home() {
 
       </div>
 
-      {/* fade-in keyframe for ticker items */}
-      <style>{`
-        @keyframes fadeInUp {
-          from { opacity: 0; transform: translateY(8px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
     </div>
   )
 }

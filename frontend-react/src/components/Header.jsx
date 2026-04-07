@@ -2,13 +2,14 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { checkHealth } from '../lib/api'
-import { LogOut, User, ChevronDown, Menu, X, Briefcase, Settings, Loader2 } from 'lucide-react'
+import { LogOut, User, ChevronDown, Menu, X, Briefcase, Settings, Loader2, Sparkles } from 'lucide-react'
 
 const navLinks = [
-  { to: '/',          label: 'Märkte',   exact: true },
-  { to: '/screener',  label: 'Screener'              },
-  { to: '/analyse',   label: 'Analyse'               },
-  { to: '/portfolio', label: 'Portfolio'             },
+  { to: '/',          label: 'Märkte',     exact: true },
+  { to: '/screener',  label: 'Screener'               },
+  { to: '/analyse',   label: 'Analyse'                },
+  { to: '/portfolio', label: 'Portfolio'              },
+  { to: '/chat',      label: 'Assistent',  icon: true  },
 ]
 
 export default function Header() {
@@ -155,18 +156,18 @@ export default function Header() {
 
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-0.5">
-            {navLinks.map(({ to, label, exact }) => (
+            {navLinks.map(({ to, label, exact, icon }) => (
               <NavLink
                 key={to}
                 to={to}
                 end={exact}
-                className={({ isActive }) => `nav-link px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${isActive ? 'active' : ''}`}
+                className={({ isActive }) => `nav-link px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-200 flex items-center gap-1.5 ${isActive ? 'active' : ''}`}
                 style={({ isActive }) => ({
                   color: isActive ? 'var(--primary)' : 'var(--text-muted)',
                   background: isActive ? 'rgba(79,142,247,0.08)' : 'transparent',
                 })}
               >
-                {label}
+                {icon && <Sparkles size={12} />}{label}
               </NavLink>
             ))}
           </nav>

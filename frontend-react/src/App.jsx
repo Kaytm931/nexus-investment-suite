@@ -8,6 +8,7 @@ import Screener from './pages/Screener'
 import Analysis from './pages/Analysis'
 import Portfolio from './pages/Portfolio'
 import Settings from './pages/Settings'
+import Chat from './pages/Chat'
 
 // ─── Error Boundary ───────────────────────────────────────────────────────────
 class ErrorBoundary extends React.Component {
@@ -164,6 +165,15 @@ function AppRoutes() {
           <ErrorBoundary>
             <Layout>
               <Settings />
+            </Layout>
+          </ErrorBoundary>
+        </ProtectedRoute>
+      } />
+      <Route path="/chat" element={
+        <ProtectedRoute>
+          <ErrorBoundary>
+            <Layout>
+              <Chat />
             </Layout>
           </ErrorBoundary>
         </ProtectedRoute>
