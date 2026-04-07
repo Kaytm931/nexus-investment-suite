@@ -1,6 +1,6 @@
 # NEXUS Investment Suite — Vollständiger Projektkontext
 
-> Letzte Aktualisierung: 2026-04-05 | Stand: WS-Fix + Recovery-Flow + Cold-Start-UX + NaN-Guards
+> Letzte Aktualisierung: 2026-04-07 | Stand: WS-Fix + Recovery-Flow + Cold-Start-UX + NaN-Guards + Design Quick Wins
 
 ---
 
@@ -173,7 +173,19 @@ Alle Endpunkte in `backend/main.py`. Basis-URL: `http://localhost:7842` (oder Re
 ### Fonts
 
 - **Body:** `Satoshi` (Variable Font) — geladen via `@font-face` in `index.css`
-- **Display / Headings:** `Boska` (Serif Variable Font) — `fontFamily: "'Boska', serif"` in JSX
+- **Display / Headings:** `Boska` (Serif Variable Font) — h1/h2 nutzen Boska mit `font-weight: 300` (Editorial-Feel)
+- **Code / Zahlen:** `JetBrains Mono` — via `.num` und `.tabular` Klassen
+
+### Design-Regeln (seit 2026-04-07 implementiert)
+
+| Regel | Detail |
+|---|---|
+| `html { color-scheme: dark }` | Browser weiß dass dark mode aktiv → korrekte native UI-Elemente |
+| `h1, h2` → Boska 300 | Editorial, Apple-like Gewichtung — NICHT 600 wie bei normalen Überschriften |
+| `h1, h2, h3` → `text-wrap: balance` | Keine awkward Zeilenumbrüche bei Headings |
+| Card-Hover Easing | `cubic-bezier(0.22, 1, 0.36, 1)` — kein Spring/Overshoot mehr |
+| `.dropdown-enter` | Fade+Scale (0.18s) beim Öffnen des User-Dropdowns |
+| Focus-visible Ring | Global `*:focus-visible` mit 0.55 Opacity (vorher 0.1 nur auf inputs) |
 
 ---
 
@@ -229,6 +241,51 @@ WebSocket nur für Progress-Anzeige.
 6. Settings.jsx Key-Anzeige nach Reload (`gsk_****` Vorschau)
 7. Home.jsx MoverRow onMouseEnter → CSS-Klassen
 8. Analysis.jsx Regex-Parsing robuster machen
+
+---
+
+## 🛠️ Skills für NEXUS — Nach Context Clear sofort lesen
+
+> Stand: 2026-04-07 | Vollständige Liste aller Skills: `D:/KI_Agenten/claude code/CLAUDE_CODE_FAEHIGKEITEN.md`
+> **Regel:** Vor jedem UI/Animation/Finance Task den passenden Skill aktivieren — nie ohne.
+
+### Design & UI
+| Skill | Wann | Identifier |
+|---|---|---|
+| **UI/UX Pro Max** | Stile, Paletten, Font-Pairings, neue Komponenten | `nextlevelbuilder-ui-ux-pro-max-skill-ui-ux-pro-max` |
+| **Apple UI Design** | Apple-like, minimal, premium — z.B. Settings, Cards, Header | `aiskillstore-marketplace-apple-ui-design` |
+| **Frontend Design** | Neue Pages oder Komponenten mit hohem Designanspruch | `frontend-design` *(Plugin)* |
+| **Design Consultation** | Komplette neue Design-Richtung → erstellt `DESIGN.md` | `garrytan-gstack-design-consultation` |
+| **Plan Design Review** | UI-Audit: was ist AI-Slop, was muss verbessert werden | `garrytan-gstack-plan-design-review` |
+| **Color & Font** | Neue Farbpalette oder Font-Kombination wählen | `minimax-ai-skills-color-font-skill` |
+
+### Animationen & Motion (React + GSAP + Lenis)
+| Skill | Wann | Identifier |
+|---|---|---|
+| **Awwwards Animations** | Jede GSAP-Aufgabe: `useGSAP()`, ScrollTrigger, Stagger, Lenis | `awwwards-animations` |
+| **Motion Principles** | Animation-Audit, Emil Kowalski Apple-Motion-Technik | `kylezantos-design-motion-principles-design-motion-principles` |
+| **Animation Systems** | Globale Motion-Entscheidungen, Easing-System, Choreographie | `animation-systems` |
+| **Interaction Design** | Loading States, Microinteractions, Error-UX, Hover-Feedback | `secondsky-claude-skills-interaction-design` |
+
+### Finanz-Charts & Analyse (Kern von NEXUS)
+| Skill | Wann | Identifier |
+|---|---|---|
+| **Data Viz 2025** | Charts in React/Recharts/Tailwind — Tufte + NYT Standard | `erichowens-some_claude_skills-data-viz-2025` |
+| **Quant Analyst** | Altair DCF verbessern, Szenario-Modelle, Risk Metrics | `sickn33-antigravity-awesome-skills-quant-analyst` |
+| **Stock Evaluator** | Conviction Score, Einstiegspreise, Buy/Hold/Sell Logik | `openclaw-skills-stock-evaluator` |
+
+### Präsentationen
+| Skill | Wann | Identifier |
+|---|---|---|
+| **PPTX** | Analyse-Reports als PowerPoint exportieren | `anthropics-skills-pptx` |
+
+### Optimierung
+| Skill | Wann | Identifier |
+|---|---|---|
+| **Context Engineering** | Sessions > 1h, Token-Limit nähert sich, großer Refactor | `context-engineering` |
+| **Claude API** | Altair/Elara Prompts, Streaming, Tool Use im Backend | `claude-api` |
+
+> **Nicht für NEXUS:** `gepeto`, `pinokio` (Pinokio), `gsap` (→ stattdessen `awwwards-animations`), `taste-skill` (→ für Blank-Slate)
 
 ---
 
