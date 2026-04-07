@@ -8,7 +8,7 @@ const SUGGESTIONS = [
   { text: 'Wie berechnet man den Conviction Score?', icon: '🎯' },
   { text: 'Erkläre mir den Unterschied zwischen KGV und KBV', icon: '🔢' },
   { text: 'Was bedeutet "Margin of Safety"?', icon: '🛡️' },
-  { text: 'Wie funktioniert der Elara Sektor-Screener?', icon: '🔍' },
+  { text: 'Aktuelle News zu NVIDIA (NVDA)', icon: '📡' },
   { text: 'Was ist ein Moat und warum ist er wichtig?', icon: '🏰' },
 ]
 
@@ -83,6 +83,7 @@ export default function Chat() {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
+  const [statusText, setStatusText] = useState(null)
   const [sessions, setSessions] = useState(() => loadHistory())
   const [activeSession, setActiveSession] = useState(null)
   const abortRef = useRef(null)
@@ -126,7 +127,11 @@ export default function Chat() {
             return updated
           })
         },
+        onStatus: (text) => {
+          setStatusText(text)
+        },
         onDone: () => {
+          setStatusText(null)
           setMessages(prev => {
             const updated = [...prev]
             updated[assistantIdx] = { role: 'assistant', content: accumulated, streaming: false }
@@ -145,6 +150,7 @@ export default function Chat() {
           }
         },
         onError: (err) => {
+          setStatusText(null)
           setMessages(prev => {
             const updated = [...prev]
             updated[assistantIdx] = {
@@ -175,6 +181,7 @@ export default function Chat() {
     setMessages([])
     setInput('')
     setStreaming(false)
+    setStatusText(null)
     setActiveSession(null)
   }
 
@@ -330,7 +337,27 @@ export default function Chat() {
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-5 py-6">
-          {isEmpty ? (
+          {/* Research status indicator */}
+        {statusText && (
+          <div className="max-w-3xl mx-auto mb-2">
+            <div
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs"
+              style={{
+                background: 'rgba(79,142,247,0.08)',
+                border: '1px solid rgba(79,142,247,0.2)',
+                color: 'var(--primary)',
+              }}
+            >
+              <span
+                className="inline-block w-1.5 h-1.5 rounded-full"
+                style={{ background: 'var(--primary)', animation: 'cursor-blink 1s step-end infinite' }}
+              />
+              {statusText}
+            </div>
+          </div>
+        )}
+
+        {isEmpty ? (
             /* Welcome screen */
             <div className="flex flex-col items-center justify-center h-full max-w-lg mx-auto text-center">
               <div

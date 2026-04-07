@@ -146,7 +146,7 @@ export async function saveAlphaVantageKey(key) {
  * Stream a chat response. Calls onDelta(text) per chunk, onDone() when finished.
  * Returns an AbortController for cancellation.
  */
-export async function chatStream(messages, { onDelta, onDone, onError } = {}) {
+export async function chatStream(messages, { onDelta, onDone, onError, onStatus } = {}) {
   const ctrl = new AbortController()
   const headers = await getAuthHeaders()
   try {
@@ -174,8 +174,10 @@ export async function chatStream(messages, { onDelta, onDone, onError } = {}) {
         const raw = line.slice(6)
         if (raw === '[DONE]') { onDone?.(); return ctrl }
         try {
-          const { delta } = JSON.parse(raw)
-          if (delta) onDelta?.(delta)
+          const parsed = JSON.parse(raw)
+          if (parsed.delta) onDelta?.(parsed.delta)
+          else if ('status' in parsed) onStatus?.(parsed.status)  // null = clear
+          else if (parsed.error) onError?.(new Error(parsed.error))
         } catch {}
       }
     }

@@ -1404,31 +1404,85 @@ async def save_key(provider: str, data: dict):
 
     return {"success": True, "provider": provider}
 
-# ── Chat endpoint (general investment assistant, SSE streaming) ────────────────
+# ── Chat endpoint (investment assistant with optional Tavily research) ─────────
 
-CHAT_SYSTEM_PROMPT = """Du bist der NEXUS Assistent — ein präziser, sachkundiger Gesprächspartner für Finanz- und Investmentthemen.
+_RE_CHAT_RESEARCH = re.compile(r'```research\s*\n(.*?)```', re.DOTALL | re.IGNORECASE)
+
+GROQ_HEADERS = lambda key: {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions"
+
+CHAT_SYSTEM_BASE = """Du bist der NEXUS Assistent — ein präziser, sachkundiger Gesprächspartner für Finanz- und Investmentthemen.
 
 Dein Charakter:
-- Erkläre Finanzkonzepte klar und verständlich, ohne Fachjargon zu vermeiden
+- Erkläre Finanzkonzepte klar und verständlich
 - Beziehe dich auf bewährte Investment-Prinzipien (Value Investing, DCF, Diversifikation)
-- Verweise bei komplexen Aktienanalysen auf die NEXUS-Analyse-Tools (Elara/Altair)
-- Sei präzise, aber menschlich — du bist ein Assistent, kein Lexikon
+- Verweise bei komplexen Aktienanalysen auf die NEXUS-Tools (Elara-Screener / Altair-Analyse)
+- Sei präzise, aber menschlich
 
-WICHTIG: Du bist kein Finanzberater. Weise bei konkreten Kauf-/Verkaufs-Empfehlungen stets darauf hin, dass Anlageentscheidungen individuell und nach eigener Prüfung getroffen werden müssen.
+WICHTIG: Du bist kein Finanzberater. Weise bei konkreten Kauf-/Verkaufsempfehlungen stets darauf hin.
 
-Antworte immer auf Deutsch, außer der Nutzer spricht eine andere Sprache."""
+Antworte auf Deutsch, außer der Nutzer schreibt eine andere Sprache."""
 
-class ChatMessage:
-    def __init__(self, role: str, content: str):
-        self.role = role
-        self.content = content
+CHAT_SYSTEM_WITH_RESEARCH = CHAT_SYSTEM_BASE + """
+
+RECHERCHE-FÄHIGKEIT:
+Du hast Zugriff auf aktuelle Web-Suche über Tavily. Nutze sie wenn:
+- Aktuelle Kurse, Quartalszahlen oder News gefragt werden
+- Du zu einem konkreten Unternehmen/ETF aktuelle Daten brauchst
+- Der Nutzer "aktuell", "heute", "jetzt" oder ein konkretes Ticker-Symbol nennt
+- Du dir bei aktuellen Fakten unsicher bist
+
+Recherche starten mit einem Block am ANFANG deiner Antwort:
+```research
+<präziser Suchbegriff auf Englisch>
+```
+
+Nutze NUR EINE Recherche pro Antwort. Ohne Recherche: direkt antworten."""
+
+
+async def _groq_complete_sync(client: httpx.AsyncClient, groq_key: str, messages: list) -> str:
+    """Non-streaming Groq call — used for the research-decision step."""
+    resp = await client.post(
+        GROQ_CHAT_URL,
+        headers=GROQ_HEADERS(groq_key),
+        json={"model": "llama-3.3-70b-versatile", "messages": messages,
+              "stream": False, "temperature": 0.5, "max_tokens": 1024},
+        timeout=45.0,
+    )
+    resp.raise_for_status()
+    return resp.json()["choices"][0]["message"]["content"]
+
+
+async def _tavily_search(client: httpx.AsyncClient, api_key: str, query: str) -> str:
+    """Execute a Tavily search and return formatted results."""
+    try:
+        resp = await client.post(
+            "https://api.tavily.com/search",
+            json={"api_key": api_key, "query": query, "search_depth": "basic",
+                  "include_answer": True, "max_results": 4},
+            timeout=20.0,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        parts = []
+        if data.get("answer"):
+            parts.append(f"Zusammenfassung: {data['answer']}")
+        for r in data.get("results", [])[:4]:
+            parts.append(f"— {r.get('title', '')}: {r.get('content', '')[:300]}")
+        return "\n".join(parts) if parts else "Keine Ergebnisse gefunden."
+    except Exception as e:
+        return f"Suche fehlgeschlagen: {e}"
+
 
 @app.post("/api/chat")
 async def chat_stream(data: dict):
     """
-    General investment assistant chat with SSE streaming.
-    Accepts: {"messages": [{"role": "user"|"assistant", "content": "..."}]}
-    Returns: text/event-stream with data: {"delta": "..."} chunks
+    Investment assistant with optional Tavily research + Groq streaming.
+    SSE events:
+      {"status": "text"}  — progress (research in progress)
+      {"status": null}    — clear status
+      {"delta": "text"}   — streaming response token
+      [DONE]              — stream end
     """
     messages = data.get("messages", [])
     if not messages:
@@ -1438,53 +1492,77 @@ async def chat_stream(data: dict):
     if not groq_key:
         raise HTTPException(status_code=503, detail="KI-Service nicht verfügbar (kein Groq API Key)")
 
-    full_messages = [{"role": "system", "content": CHAT_SYSTEM_PROMPT}] + [
+    cfg = load_config()
+    tavily_key = cfg.get("tavily_api_key", "").strip()
+    has_tavily = bool(tavily_key and tavily_key not in ("", "YOUR_TAVILY_API_KEY_HERE"))
+
+    system_prompt = CHAT_SYSTEM_WITH_RESEARCH if has_tavily else CHAT_SYSTEM_BASE
+    clean_messages = [
         {"role": m["role"], "content": m["content"]}
         for m in messages
         if m.get("role") in ("user", "assistant") and m.get("content")
     ]
 
     async def generate():
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            async with client.stream(
-                "POST",
-                "https://api.groq.com/openai/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {groq_key}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": "llama-3.3-70b-versatile",
-                    "messages": full_messages,
-                    "stream": True,
-                    "temperature": 0.65,
-                    "max_tokens": 2048,
-                },
-            ) as response:
-                if response.status_code != 200:
-                    body = await response.aread()
-                    yield f"data: {json.dumps({'error': f'Groq error {response.status_code}'})}\n\n"
-                    return
-                async for line in response.aiter_lines():
-                    if not line.startswith("data: "):
-                        continue
-                    raw = line[6:]
-                    if raw == "[DONE]":
-                        yield "data: [DONE]\n\n"
+        async with httpx.AsyncClient(timeout=90.0) as client:
+            conv = [{"role": "system", "content": system_prompt}] + clean_messages
+
+            # ── Step 1: Research phase (only if Tavily available) ──────────────
+            if has_tavily:
+                try:
+                    first_reply = await _groq_complete_sync(client, groq_key, conv)
+                    match = _RE_CHAT_RESEARCH.search(first_reply)
+                    if match:
+                        query = match.group(1).strip()
+                        yield f"data: {json.dumps({'status': f'🔍 Suche nach: {query}'})}\n\n"
+                        search_result = await _tavily_search(client, tavily_key, query)
+                        yield f"data: {json.dumps({'status': None})}\n\n"
+
+                        # Strip the research block, keep any text before it
+                        text_before = first_reply[:match.start()].strip()
+                        assistant_turn = (text_before + "\n\n" if text_before else "") + \
+                            f"[Suche ausgeführt: {query}]"
+                        conv = conv + [
+                            {"role": "assistant", "content": assistant_turn},
+                            {"role": "user", "content":
+                                f"RECHERCHE-ERGEBNIS für \"{query}\":\n\n{search_result}\n\n"
+                                "Beantworte jetzt die ursprüngliche Frage auf Basis dieser Daten. "
+                                "Starte NICHT mit einem neuen ```research Block."},
+                        ]
+                    # else: no research needed, proceed directly to streaming
+                except Exception:
+                    pass  # fall through to streaming without research
+
+            # ── Step 2: Stream final answer ────────────────────────────────────
+            try:
+                async with client.stream(
+                    "POST", GROQ_CHAT_URL,
+                    headers=GROQ_HEADERS(groq_key),
+                    json={"model": "llama-3.3-70b-versatile", "messages": conv,
+                          "stream": True, "temperature": 0.65, "max_tokens": 2048},
+                ) as response:
+                    if response.status_code != 200:
+                        yield f"data: {json.dumps({'error': f'Groq Fehler {response.status_code}'})}\n\n"
                         return
-                    try:
-                        chunk = json.loads(raw)
-                        delta = chunk["choices"][0]["delta"].get("content", "")
-                        if delta:
-                            yield f"data: {json.dumps({'delta': delta})}\n\n"
-                    except Exception:
-                        pass
+                    async for line in response.aiter_lines():
+                        if not line.startswith("data: "):
+                            continue
+                        raw = line[6:]
+                        if raw == "[DONE]":
+                            yield "data: [DONE]\n\n"
+                            return
+                        try:
+                            chunk = json.loads(raw)
+                            delta = chunk["choices"][0]["delta"].get("content", "")
+                            if delta:
+                                yield f"data: {json.dumps({'delta': delta})}\n\n"
+                        except Exception:
+                            pass
+            except Exception as e:
+                yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
     return StreamingResponse(
         generate(),
         media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",
-        },
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
