@@ -292,8 +292,7 @@ async def lifespan(app: FastAPI):
 
     groq_key = os.environ.get("GROQ_API_KEY", "").strip()
     if groq_key:
-        key_preview = groq_key[:8] + "..." if len(groq_key) > 8 else "(zu kurz!)"
-        print(f"[NEXUS] GROQ_API_KEY erkannt: {key_preview} (Länge: {len(groq_key)})")
+        print("[NEXUS] GROQ_API_KEY detected.")
         ollama_service = GroqService(api_key=groq_key)
         print("[NEXUS] AI provider: Groq (llama-3.3-70b-versatile)")
     else:
@@ -329,8 +328,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=_ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Requested-With"],
 )
 
 # ── Static files ───────────────────────────────────────────────────────────────

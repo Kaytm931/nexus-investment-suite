@@ -7,6 +7,12 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import date
 
+# Shared validation patterns
+TICKER_PATTERN = r"^[A-Za-z0-9.\-\^=]{1,20}$"
+# Forbid control characters to prevent LLM prompt injection via newlines/tabs
+SAFE_TEXT_PATTERN = r"^[^\x00-\x1f]+$"
+ISO_DATE_PATTERN = r"^\d{4}-\d{2}-\d{2}$"
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Elara Screener
@@ -20,14 +26,20 @@ class ElaraFilters(BaseModel):
     )
     region: Optional[str] = Field(
         default=None,
+        max_length=100,
+        pattern=SAFE_TEXT_PATTERN,
         description="Geographic filter, e.g. 'USA', 'Europe', 'Global'"
     )
     exclusions: Optional[str] = Field(
         default=None,
+        max_length=500,
+        pattern=SAFE_TEXT_PATTERN,
         description="Comma-separated tickers or names to exclude"
     )
     horizon: Optional[str] = Field(
         default=None,
+        max_length=100,
+        pattern=SAFE_TEXT_PATTERN,
         description="Investment horizon, e.g. '1-3 Jahre', '3-5 Jahre', 'langfristig'"
     )
 
@@ -38,6 +50,7 @@ class ElaraRequest(BaseModel):
         ...,
         min_length=2,
         max_length=200,
+        pattern=SAFE_TEXT_PATTERN,
         description="Sector or theme to screen, e.g. 'Cloud Computing', 'Pharmaceuticals'"
     )
     filters: Optional[ElaraFilters] = Field(
@@ -70,6 +83,7 @@ class AltairRequest(BaseModel):
         ...,
         min_length=1,
         max_length=20,
+        pattern=TICKER_PATTERN,
         description="Stock ticker or ETF ISIN, e.g. 'AAPL', 'MSFT', 'IE00B4L5Y983'"
     )
     session_id: Optional[str] = Field(
@@ -98,20 +112,25 @@ class AltairResponse(BaseModel):
 
 class PortfolioPositionCreate(BaseModel):
     """Request body for adding a new portfolio position."""
-    ticker: str = Field(..., min_length=1, max_length=20, description="Stock ticker symbol")
-    name: str = Field(..., min_length=1, max_length=200, description="Company or ETF name")
+    ticker: str = Field(..., min_length=1, max_length=20, pattern=TICKER_PATTERN, description="Stock ticker symbol")
+    name: str = Field(..., min_length=1, max_length=200, pattern=SAFE_TEXT_PATTERN, description="Company or ETF name")
     entry_price: float = Field(..., gt=0, description="Purchase price per share in USD/EUR")
     shares: float = Field(..., gt=0, description="Number of shares purchased")
     purchase_date: str = Field(
         ...,
+        pattern=ISO_DATE_PATTERN,
         description="Date of purchase in YYYY-MM-DD format"
     )
     sector: Optional[str] = Field(
         default=None,
+        max_length=100,
+        pattern=SAFE_TEXT_PATTERN,
         description="Sector classification, e.g. 'Technology', 'Healthcare'"
     )
     region: Optional[str] = Field(
         default=None,
+        max_length=100,
+        pattern=SAFE_TEXT_PATTERN,
         description="Geographic region, e.g. 'USA', 'Europe', 'Emerging Markets'"
     )
 
@@ -152,14 +171,14 @@ class PortfolioPosition(BaseModel):
 
 class PortfolioPositionUpdate(BaseModel):
     """Request body for updating an existing position (all fields optional)."""
-    ticker: Optional[str] = Field(default=None, max_length=20)
-    name: Optional[str] = Field(default=None, max_length=200)
+    ticker: Optional[str] = Field(default=None, max_length=20, pattern=TICKER_PATTERN)
+    name: Optional[str] = Field(default=None, max_length=200, pattern=SAFE_TEXT_PATTERN)
     entry_price: Optional[float] = Field(default=None, gt=0)
     current_price: Optional[float] = Field(default=None, gt=0)
     shares: Optional[float] = Field(default=None, gt=0)
-    purchase_date: Optional[str] = None
-    sector: Optional[str] = None
-    region: Optional[str] = None
+    purchase_date: Optional[str] = Field(default=None, pattern=ISO_DATE_PATTERN)
+    sector: Optional[str] = Field(default=None, max_length=100, pattern=SAFE_TEXT_PATTERN)
+    region: Optional[str] = Field(default=None, max_length=100, pattern=SAFE_TEXT_PATTERN)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
