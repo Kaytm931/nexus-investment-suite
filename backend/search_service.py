@@ -175,37 +175,6 @@ class SearchService:
     async def gather_ticker_data(self, ticker: str) -> dict:
         return await self.gather_ticker_qualitative(ticker)
 
-    async def gather_ticker_data(self, ticker: str) -> dict:
-        """
-        For Altair: gather comprehensive data about a single ticker.
-        Returns: {"context": str, "sources": list}
-        """
-        queries = [
-            f"{ticker} stock current price market cap P/E ratio EV/EBITDA",
-            f"{ticker} revenue growth earnings FCF margin ROE debt-to-equity",
-            f"{ticker} analyst consensus price target earnings forecast 2024 2025",
-            f"{ticker} insider buying selling transactions recent",
-            f"{ticker} competitors peer comparison valuation",
-            f"{ticker} risks business model competitive advantage moat",
-        ]
-
-        all_results = []
-        all_sources = []
-
-        for query in queries:
-            result = await self.search(query, max_results=4)
-            if result["success"]:
-                all_results.append(f"Query: {query}")
-                if result["answer"]:
-                    all_results.append(f"Summary: {result['answer']}")
-                for r in result["results"]:
-                    all_results.append(f"Source [{r['url']}]: {r['content'][:600]}")
-                    all_sources.append({"url": r["url"], "title": r["title"]})
-            await asyncio.sleep(0.3)
-
-        context = "\n\n".join(all_results)
-        return {"context": context, "sources": all_sources}
-
     async def get_stock_price(self, ticker: str) -> dict:
         """Quick price lookup for portfolio refresh."""
         result = await self.search(f"{ticker} stock price today current", max_results=3)

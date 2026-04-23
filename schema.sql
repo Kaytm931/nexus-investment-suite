@@ -136,7 +136,7 @@ CREATE POLICY "positions_owner" ON positions
 CREATE POLICY "api_keys_owner" ON api_keys
   FOR ALL USING (auth.uid() = user_id);
 
--- Analysis cache: public read, authenticated write
-CREATE POLICY "cache_read_all"   ON analysis_cache FOR SELECT USING (true);
-CREATE POLICY "cache_write_auth" ON analysis_cache FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+-- Analysis cache: authenticated read + write (prevents unauthenticated leak of generated reports)
+CREATE POLICY "cache_read_auth"   ON analysis_cache FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "cache_write_auth"  ON analysis_cache FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 CREATE POLICY "cache_update_auth" ON analysis_cache FOR UPDATE USING (auth.role() = 'authenticated');
