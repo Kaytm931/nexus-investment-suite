@@ -120,6 +120,10 @@ class YFinanceService:
         tasks = [self.get_ticker_data(t) for t in tickers]
         return await asyncio.gather(*tasks)
 
+    def close(self) -> None:
+        """Shut down the underlying ThreadPoolExecutor cleanly."""
+        self._executor.shutdown(wait=True)
+
     def format_for_prompt(self, data: dict) -> str:
         """Format as structured text block for the LLM — token-efficient."""
         if data.get("error") and not data.get("current_price"):

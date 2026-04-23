@@ -137,6 +137,23 @@ def save_config(cfg: dict) -> None:
         encoding="utf-8",
     )
 
+# ── Simple in-memory TTL cache ────────────────────────────────────────────────
+# Used for read-heavy yFinance/Tavily lookups so repeated requests for the same
+# input don't hammer upstream APIs.
+
+_TTL_CACHE: Dict[str, tuple] = {}
+
+def cache_get(key: str):
+    entry = _TTL_CACHE.get(key)
+    if entry and entry[0] > time.monotonic():
+        return entry[1]
+    if entry:
+        _TTL_CACHE.pop(key, None)
+    return None
+
+def cache_set(key: str, value, ttl_seconds: int) -> None:
+    _TTL_CACHE[key] = (time.monotonic() + ttl_seconds, value)
+
 # ── System Prompts ─────────────────────────────────────────────────────────────
 
 ELARA_SYSTEM_PROMPT = """# System-Rolle: Project Elara v2 (Quantamental Sector Screener)
@@ -367,11 +384,20 @@ async def lifespan(app: FastAPI):
         print("[NEXUS] AI provider: Ollama (local)")
     await ollama_service.init()
 
+    # Also expose services on app.state so future endpoints can inject via
+    # `request.app.state.*` instead of reaching for module globals.
+    app.state.search_service = search_service
+    app.state.ollama_service = ollama_service
+    app.state.yf_service = yf_service
+    app.state.connection_manager = manager
+
     yield
 
     if search_service:
         await search_service.close()
     await ollama_service.close()
+    if yf_service:
+        yf_service.close()
     print("[NEXUS] Services closed.")
 
 
@@ -496,6 +522,7 @@ async def update_config(data: dict):
             await search_service.close()
         search_service = SearchService(api_key=data["tavily_api_key"])
         await search_service.init()
+        app.state.search_service = search_service
     if "ollama_model" in data or "ollama_num_ctx" in data:
         await ollama_service.close()
         ollama_service = OllamaService(
@@ -503,9 +530,64 @@ async def update_config(data: dict):
             num_ctx=cfg.get("ollama_num_ctx", 32768),
         )
         await ollama_service.init()
+        app.state.ollama_service = ollama_service
     return {"success": True}
 
 # ── Elara Screener ─────────────────────────────────────────────────────────────
+
+def _validate_elara_scores(markdown: str) -> dict:
+    """
+    Extract the rightmost numeric column (Elara Score) from every data row of
+    the first markdown table and validate it is in [0, 100].
+
+    Returns {"rows": int, "valid": int, "out_of_range": int, "unparseable": int,
+             "min": float|None, "max": float|None}.
+    """
+    rows = 0
+    valid = 0
+    out_of_range = 0
+    unparseable = 0
+    min_s: Optional[float] = None
+    max_s: Optional[float] = None
+
+    for line in markdown.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("|") or not stripped.endswith("|"):
+            continue
+        # Skip header separator rows like |---|---|
+        if set(stripped.replace("|", "").replace(":", "").strip()) <= {"-", " "}:
+            continue
+        cells = [c.strip() for c in stripped.strip("|").split("|")]
+        if len(cells) < 4:
+            continue
+        # Header row heuristic: first cell is "#" literal or "Ticker"
+        first = cells[0].lower()
+        if first in ("#", "ticker", "name") or "ticker" in first and "name" in cells[1].lower() if len(cells) > 1 else False:
+            continue
+        rows += 1
+        # Elara Score is the last numeric-looking cell
+        score_cell = cells[-1].replace(",", ".").replace("%", "").strip()
+        try:
+            score = float(score_cell)
+        except ValueError:
+            unparseable += 1
+            continue
+        if 0.0 <= score <= 100.0:
+            valid += 1
+            min_s = score if min_s is None else min(min_s, score)
+            max_s = score if max_s is None else max(max_s, score)
+        else:
+            out_of_range += 1
+
+    return {
+        "rows": rows,
+        "valid": valid,
+        "out_of_range": out_of_range,
+        "unparseable": unparseable,
+        "min": min_s,
+        "max": max_s,
+    }
+
 
 @app.post("/api/elara/screen")
 @limiter.limit("5/minute")
@@ -516,12 +598,14 @@ async def elara_screen(request: Request, payload: ElaraRequest):
     cached = get_elara_results(payload.sector)
     if cached:
         result_data = cached["results_json"]
+        raw_content = result_data.get("content", result_data.get("raw_content", ""))
         return {
             "success": True,
             "sector": payload.sector,
-            "raw_content": result_data.get("content", result_data.get("raw_content", "")),
+            "raw_content": raw_content,
             "sources": result_data.get("sources", []),
             "cached": True,
+            "score_validation": _validate_elara_scores(raw_content),
         }
 
     # 1. Gather web data
@@ -576,6 +660,14 @@ Erstelle jetzt das vollständige Elara-Screening basierend auf diesen Daten."""
     if not result["success"]:
         raise HTTPException(status_code=500, detail=result.get("error", "Ollama-Fehler"))
 
+    validation = _validate_elara_scores(result["content"])
+    if validation["rows"] > 0 and (validation["out_of_range"] or validation["unparseable"]):
+        print(
+            f"[Elara] Score validation warnings for '{payload.sector}': "
+            f"rows={validation['rows']} valid={validation['valid']} "
+            f"out_of_range={validation['out_of_range']} unparseable={validation['unparseable']}"
+        )
+
     save_elara_results(payload.sector, {
         "content": result["content"],
         "sources": sources,
@@ -588,6 +680,7 @@ Erstelle jetzt das vollständige Elara-Screening basierend auf diesen Daten."""
         "raw_content": result["content"],
         "sources": sources,
         "cached": False,
+        "score_validation": validation,
     }
 
 # ── Altair Deep Dive ───────────────────────────────────────────────────────────
@@ -649,12 +742,46 @@ async def altair_analyze(request: Request, payload: AltairRequest):
             rfr_value = float(rfr_raw)
     except Exception:
         pass
+    # CAPM: discount_rate = Rf + β × ERP (equity risk premium ≈ 5.0%)
+    # Clamp β to [0.5, 2.5] to avoid pathological outputs from sparse/noisy yfinance data.
+    EQUITY_RISK_PREMIUM = 5.0
+    beta_raw = yf_data.get("beta")
+    beta_used: Optional[float]
+    try:
+        beta_used = float(beta_raw) if beta_raw is not None else None
+    except (TypeError, ValueError):
+        beta_used = None
+    if beta_used is not None:
+        beta_used = max(0.5, min(2.5, beta_used))
+
     if rfr_value:
         rfr_text = f"10y US-Treasury Yield (Risk-Free Rate): {rfr_value:.2f}%"
-        discount_rate = rfr_value + 5.0
-        rfr_text += f"\nDiskontierungssatz (Risk-Free + 5%): {discount_rate:.2f}%"
+        if beta_used is not None:
+            discount_rate = rfr_value + beta_used * EQUITY_RISK_PREMIUM
+            rfr_text += (
+                f"\nBeta (yFinance, geklemmt auf [0.5, 2.5]): {beta_used:.2f}"
+                f"\nDiskontierungssatz (CAPM: Rf + β × 5%): {discount_rate:.2f}%"
+            )
+        else:
+            discount_rate = rfr_value + EQUITY_RISK_PREMIUM
+            rfr_text += (
+                f"\nBeta: nicht verfügbar — Annahme β=1.0"
+                f"\nDiskontierungssatz (Rf + 5%): {discount_rate:.2f}%"
+            )
     else:
-        rfr_text = "10y US-Treasury Yield: ~4.50% (Fallback-Schätzung, kein Live-Wert verfügbar)\nDiskontierungssatz: 9.50%"
+        if beta_used is not None:
+            fallback_rate = 4.5 + beta_used * EQUITY_RISK_PREMIUM
+            rfr_text = (
+                f"10y US-Treasury Yield: ~4.50% (Fallback-Schätzung, kein Live-Wert)"
+                f"\nBeta (yFinance, geklemmt auf [0.5, 2.5]): {beta_used:.2f}"
+                f"\nDiskontierungssatz (CAPM: 4.5% + β × 5%): {fallback_rate:.2f}%"
+            )
+        else:
+            rfr_text = (
+                "10y US-Treasury Yield: ~4.50% (Fallback-Schätzung, kein Live-Wert)"
+                "\nBeta: nicht verfügbar — Annahme β=1.0"
+                "\nDiskontierungssatz: 9.50%"
+            )
 
     # 1c. Tavily — qualitative Daten + bei yfinance-Fehler auch quantitative Suche
     sources = []
@@ -944,7 +1071,9 @@ async def get_performance(user_id: Optional[str] = Depends(get_current_user)):
 def _calculate_position_pnl(pos: dict, total_value: Optional[float]) -> PortfolioPosition:
     """Compute P&L fields for a single position."""
     entry = pos.get("entry_price", 0) or 0
-    current = pos.get("current_price") or entry
+    stored_price = pos.get("current_price")
+    price_stale = stored_price is None
+    current = stored_price if stored_price is not None else entry
     shares = pos.get("shares", 0) or 0
 
     cost_basis = entry * shares
@@ -968,6 +1097,7 @@ def _calculate_position_pnl(pos: dict, total_value: Optional[float]) -> Portfoli
         weight=round(weight, 2) if weight is not None else None,
         cost_basis=round(cost_basis, 2),
         current_value=round(current_value, 2),
+        price_stale=price_stale,
     )
 
 
@@ -1149,6 +1279,11 @@ async def search_ticker(q: str = ""):
         return []
 
     query = q.strip().upper()
+    cache_key = f"search:{query}"
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return cached
+
     suffixes = ["", ".DE", ".F", ".PA", ".L", ".AS", ".SW", ".TO", ".HK", ".T", ".MI"]
     results = []
     loop = asyncio.get_event_loop()
@@ -1180,6 +1315,7 @@ async def search_ticker(q: str = ""):
     for h in hits:
         if h and len(results) < 5:
             results.append(h)
+    cache_set(cache_key, results, ttl_seconds=3600)  # 1h
     return results
 
 # ── Market data ──────────────────────────────────────────────────────────────────
@@ -1232,6 +1368,9 @@ _MOVER_WATCHLIST = [
 @app.get("/api/market/movers")
 async def get_market_movers():
     """Return biggest intraday movers from watchlist + major index values with sparklines."""
+    cached = cache_get("market:movers")
+    if cached is not None:
+        return cached
     loop = asyncio.get_event_loop()
 
     def _get_price_change(ticker_obj):
@@ -1336,6 +1475,7 @@ async def get_market_movers():
     from concurrent.futures import ThreadPoolExecutor
     with ThreadPoolExecutor(max_workers=4) as ex:
         data = await loop.run_in_executor(ex, _fetch)
+    cache_set("market:movers", data, ttl_seconds=300)  # 5 min
     return data
 
 # ── API Key management ────────────────────────────────────────────────────────────
@@ -1456,6 +1596,7 @@ async def save_ollama(data: dict):
     await ollama_service.close()
     ollama_service = OllamaService(model=model, num_ctx=cfg.get("ollama_num_ctx", 32768))
     await ollama_service.init()
+    app.state.ollama_service = ollama_service
     return {"success": True, "base_url": base_url, "model": model}
 
 @app.post("/api/keys/alphavantage")
@@ -1493,6 +1634,7 @@ async def save_key(provider: str, data: dict):
             await search_service.close()
         search_service = SearchService(api_key=key)
         await search_service.init()
+        app.state.search_service = search_service
 
     return {"success": True, "provider": provider}
 

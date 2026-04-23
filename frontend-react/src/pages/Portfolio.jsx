@@ -543,7 +543,18 @@ export default function Portfolio() {
                       </td>
                       <td className="max-w-[160px] truncate" style={{ color: 'var(--text-muted)' }}>{pos.name || '—'}</td>
                       <td className="num">{formatCurrency(pos.purchase_price)}</td>
-                      <td className="num">{formatCurrency(curPrice)}</td>
+                      <td className="num">
+                        {formatCurrency(curPrice)}
+                        {pos.price_stale && (
+                          <span
+                            className="ml-1 text-xs"
+                            style={{ color: 'var(--warning, #f59e0b)' }}
+                            title="Kurs konnte nicht aktualisiert werden — Anzeige basiert auf Einstand"
+                          >
+                            *
+                          </span>
+                        )}
+                      </td>
                       <td className={`num ${positive ? 'positive' : 'negative'}`}>
                         {isNaN(pnlEur) ? <span style={{ color: 'var(--text-muted)' }}>—</span> : `${positive ? '+' : ''}${formatCurrency(pnlEur)}`}
                       </td>
