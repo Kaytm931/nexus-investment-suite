@@ -167,6 +167,10 @@ class PortfolioPosition(BaseModel):
         default=None,
         description="Current value: current_price * shares"
     )
+    price_stale: bool = Field(
+        default=False,
+        description="True if current_price could not be refreshed and P&L falls back to entry_price."
+    )
 
 
 class PortfolioPositionUpdate(BaseModel):

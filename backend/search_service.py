@@ -4,11 +4,26 @@ Uses Tavily API to fetch real-time financial data with sources.
 """
 import asyncio
 import httpx
-from typing import Optional
+import time
+from typing import Optional, Any
 from pathlib import Path
 import json
 
 TAVILY_API_URL = "https://api.tavily.com/search"
+
+# In-process TTL cache to cut Tavily credit burn for repeated queries.
+_TAVILY_CACHE: dict[str, tuple[float, Any]] = {}
+
+def _cache_get(key: str):
+    entry = _TAVILY_CACHE.get(key)
+    if entry and entry[0] > time.monotonic():
+        return entry[1]
+    if entry:
+        _TAVILY_CACHE.pop(key, None)
+    return None
+
+def _cache_set(key: str, value: Any, ttl_seconds: int) -> None:
+    _TAVILY_CACHE[key] = (time.monotonic() + ttl_seconds, value)
 
 class SearchService:
     def __init__(self, api_key: str):
@@ -60,6 +75,11 @@ class SearchService:
         Quantitative data is fetched via yfinance afterwards.
         Returns: {"context": str, "sources": list}
         """
+        cache_key = f"tavily:sector:{sector.lower().strip()}:{json.dumps(filters or {}, sort_keys=True)}"
+        cached = _cache_get(cache_key)
+        if cached is not None:
+            return cached
+
         region = filters.get("region", "") if filters else ""
         region_str = f" {region}" if region else ""
 
@@ -81,7 +101,10 @@ class SearchService:
                     all_sources.append({"url": r["url"], "title": r["title"]})
             await asyncio.sleep(0.3)
 
-        return {"context": "\n\n".join(all_results), "sources": all_sources}
+        payload = {"context": "\n\n".join(all_results), "sources": all_sources}
+        # Sector composition changes slowly — 24h is plenty.
+        _cache_set(cache_key, payload, ttl_seconds=24 * 3600)
+        return payload
 
     async def gather_ticker_qualitative(self, ticker: str, company_name: str = "") -> dict:
         """
@@ -90,6 +113,11 @@ class SearchService:
         1 search, basic depth = ~75% weniger Tavily-Credits als vorher.
         Returns: {"context": str, "sources": list}
         """
+        cache_key = f"tavily:ticker_qual:{ticker.upper().strip()}:{(company_name or '').lower().strip()}"
+        cached = _cache_get(cache_key)
+        if cached is not None:
+            return cached
+
         name = company_name or ticker
         # Single combined query using full company name to avoid ticker ambiguity
         query = f"{name} insider buying selling competitive advantage moat risks analyst 2025"
@@ -105,7 +133,9 @@ class SearchService:
                 all_results.append(f"[{r['url']}]: {r['content'][:400]}")
                 all_sources.append({"url": r["url"], "title": r.get("title", r["url"])})
 
-        return {"context": "\n\n".join(all_results), "sources": all_sources}
+        payload = {"context": "\n\n".join(all_results), "sources": all_sources}
+        _cache_set(cache_key, payload, ttl_seconds=3600)
+        return payload
 
     async def resolve_primary_ticker(self, query: str) -> dict:
         """
@@ -148,6 +178,11 @@ class SearchService:
         Full Tavily fallback when yfinance has no data (e.g. cross-listing tickers).
         Does 5 searches covering both quantitative and qualitative data.
         """
+        cache_key = f"tavily:ticker_full:{ticker.upper().strip()}"
+        cached = _cache_get(cache_key)
+        if cached is not None:
+            return cached
+
         queries = [
             f"{ticker} stock price market cap valuation P/E ratio current",
             f"{ticker} revenue earnings FCF margin ROE debt fundamentals",
@@ -166,7 +201,11 @@ class SearchService:
                     all_results.append(f"[{r['url']}]: {r['content'][:600]}")
                     all_sources.append({"url": r["url"], "title": r["title"]})
             await asyncio.sleep(0.3)
-        return {"context": "\n\n".join(all_results), "sources": all_sources}
+
+        payload = {"context": "\n\n".join(all_results), "sources": all_sources}
+        # 1h TTL — price/PE go stale fast, but full-fallback path is rare anyway.
+        _cache_set(cache_key, payload, ttl_seconds=3600)
+        return payload
 
     # Keep old method names for backward compatibility
     async def gather_sector_data(self, sector: str, filters: dict = None) -> dict:
