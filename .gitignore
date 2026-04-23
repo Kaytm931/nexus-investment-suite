@@ -78,3 +78,6 @@ tmp/
 temp/
 *.tmp
 *.bak
+
+# ── Skills tool output ───────────────────────────────────────────────────────
+skills/**/skill-report.json

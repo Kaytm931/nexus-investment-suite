@@ -1,6 +1,6 @@
 ---
 name: design-taste-frontend
-description: Senior UI/UX Engineer. Architect digital interfaces overriding default LLM biases. Enforces metric-based rules, strict component architecture, CSS hardware acceleration, and balanced design engineering.
+description: Senior UI/UX Engineer. Architect digital interfaces overriding default LLM biases. Enforces metric-based rules, strict component architecture, CSS hardware acceleration, and balanced design engineering. NOT for premade design libraries (use `ui-ux-pro-max`), Apple-specific work (use `apple-ui-design`), or consultations that generate DESIGN.md (use `design-consultation`).
 ---
 
 # High-Agency Frontend Skill

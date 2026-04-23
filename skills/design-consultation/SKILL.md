@@ -6,6 +6,8 @@ description: |
   complete design system (aesthetic, typography, color, layout, spacing, motion), and
   generates font+color preview pages. Creates DESIGN.md as your project's design source
   of truth. For existing sites, use /plan-design-review to infer the system instead.
+  NOT for quick UI reference (use `ui-ux-pro-max`), Apple-style polish (use `apple-ui-design`),
+  or high-agency metric rules (use `design-taste-frontend`).
 allowed-tools:
   - Bash
   - Read
