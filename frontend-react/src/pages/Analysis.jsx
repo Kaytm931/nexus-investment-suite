@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import ApiKeyGate from '../components/ApiKeyGate'
 import ConvictionGauge from '../components/ConvictionGauge'
 import StockChart from '../components/StockChart'
-import { runAltairAnalysis, searchTicker, fetchStockData, fetchHistory, WS_BASE } from '../lib/api'
+import { runAltairAnalysis, searchTicker, fetchStockData, fetchHistory, buildWsUrl } from '../lib/api'
 import { gsap } from 'gsap'
 import {
   Brain, Search, Loader2, AlertCircle, ChevronRight, RefreshCw,
@@ -359,8 +359,9 @@ export default function Analysis() {
     // Generate a session ID for this analysis run
     const sessionId = crypto.randomUUID()
 
-    // Open WebSocket and wait for connection
-    const ws = new WebSocket(`${WS_BASE}/ws/${sessionId}`)
+    // Open WebSocket and wait for connection (authenticated via ?token=...)
+    const wsUrl = await buildWsUrl(`/ws/${sessionId}`)
+    const ws = new WebSocket(wsUrl)
     wsRef.current = ws
 
     ws.onmessage = (e) => {

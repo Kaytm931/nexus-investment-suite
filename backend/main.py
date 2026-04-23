@@ -16,10 +16,13 @@ from typing import Optional, Dict, List
 from dotenv import load_dotenv
 load_dotenv()
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Header, Depends
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Header, Depends, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -56,6 +59,50 @@ FRONTEND_DIR = PROJECT_ROOT / "frontend"
 
 CONFIG_PATH = PROJECT_ROOT / "config.json"
 
+# Secret fields in config.json that must be encrypted at rest.
+_SECRET_FIELDS = (
+    "tavily_api_key",
+    "claude_api_key",
+    "alphavantage_api_key",
+    "openai_api_key",
+    "gemini_api_key",
+)
+_ENCRYPTED_PREFIX = "fernet:"
+
+def _get_fernet():
+    """Return a Fernet instance, or None if ENCRYPTION_KEY is not set."""
+    key = os.environ.get("ENCRYPTION_KEY", "").strip()
+    if not key:
+        return None
+    try:
+        from cryptography.fernet import Fernet
+        return Fernet(key.encode() if isinstance(key, str) else key)
+    except Exception as exc:
+        print(f"[NEXUS] WARNING: ENCRYPTION_KEY invalid ({exc}); secrets will be stored in plaintext.")
+        return None
+
+def _decrypt_secret(value: str, fernet) -> str:
+    if not value or not isinstance(value, str) or not value.startswith(_ENCRYPTED_PREFIX):
+        return value
+    if fernet is None:
+        # Encrypted value but no key available — cannot decrypt. Return empty to fail closed.
+        print("[NEXUS] WARNING: encrypted secret in config but no ENCRYPTION_KEY set.")
+        return ""
+    try:
+        return fernet.decrypt(value[len(_ENCRYPTED_PREFIX):].encode()).decode()
+    except Exception as exc:
+        print(f"[NEXUS] WARNING: failed to decrypt secret ({exc}).")
+        return ""
+
+def _encrypt_secret(value: str, fernet) -> str:
+    if not value or not isinstance(value, str):
+        return value
+    if value.startswith(_ENCRYPTED_PREFIX):
+        return value  # already encrypted
+    if fernet is None:
+        return value  # no key: store as-is (degraded mode, warned in lifespan)
+    return _ENCRYPTED_PREFIX + fernet.encrypt(value.encode()).decode()
+
 def load_config() -> dict:
     if CONFIG_PATH.exists():
         cfg = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
@@ -66,12 +113,29 @@ def load_config() -> dict:
             "tavily_api_key": "",
             "port": 7842,
         }
+    # Decrypt any encrypted secrets before handing cfg to callers.
+    fernet = _get_fernet()
+    for field in _SECRET_FIELDS:
+        if field in cfg:
+            cfg[field] = _decrypt_secret(cfg[field], fernet)
     # Env vars override config.json — needed for Render deployment
     if os.environ.get("TAVILY_API_KEY"):
         cfg["tavily_api_key"] = os.environ["TAVILY_API_KEY"]
     if os.environ.get("OLLAMA_MODEL"):
         cfg["ollama_model"] = os.environ["OLLAMA_MODEL"]
     return cfg
+
+def save_config(cfg: dict) -> None:
+    """Persist config.json, encrypting secret fields at rest."""
+    fernet = _get_fernet()
+    cfg_to_write = dict(cfg)
+    for field in _SECRET_FIELDS:
+        if field in cfg_to_write:
+            cfg_to_write[field] = _encrypt_secret(cfg_to_write[field], fernet)
+    CONFIG_PATH.write_text(
+        json.dumps(cfg_to_write, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
 
 # ── System Prompts ─────────────────────────────────────────────────────────────
 
@@ -332,6 +396,12 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type", "X-Requested-With"],
 )
 
+# ── Rate limiting (per-IP) ─────────────────────────────────────────────────────
+# Protects expensive LLM/search endpoints from quota exhaustion.
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 # ── Static files ───────────────────────────────────────────────────────────────
 
 if FRONTEND_DIR.exists():
@@ -351,6 +421,16 @@ async def serve_frontend():
 
 @app.websocket("/ws/{session_id}")
 async def websocket_endpoint(websocket: WebSocket, session_id: str):
+    # When Supabase is configured (production), require a valid token via
+    # ?token=<jwt> query param so unauthenticated clients can't subscribe to
+    # arbitrary session_ids and observe other users' research progress.
+    if supabase_db.is_configured():
+        token = websocket.query_params.get("token", "")
+        user_id = supabase_db.get_user_from_token(token) if token else None
+        if not user_id:
+            await websocket.close(code=4401)  # Policy violation
+            return
+
     await manager.connect(session_id, websocket)
     try:
         while True:
@@ -409,7 +489,7 @@ async def update_config(data: dict):
     for k in allowed:
         if k in data:
             cfg[k] = data[k]
-    CONFIG_PATH.write_text(json.dumps(cfg, indent=2, ensure_ascii=False), encoding="utf-8")
+    save_config(cfg)
     # Reinit services with new config
     if "tavily_api_key" in data:
         if search_service:
@@ -428,16 +508,17 @@ async def update_config(data: dict):
 # ── Elara Screener ─────────────────────────────────────────────────────────────
 
 @app.post("/api/elara/screen")
-async def elara_screen(request: ElaraRequest):
-    session_id = request.session_id
+@limiter.limit("5/minute")
+async def elara_screen(request: Request, payload: ElaraRequest):
+    session_id = payload.session_id
 
     # Check cache first
-    cached = get_elara_results(request.sector)
+    cached = get_elara_results(payload.sector)
     if cached:
         result_data = cached["results_json"]
         return {
             "success": True,
-            "sector": request.sector,
+            "sector": payload.sector,
             "raw_content": result_data.get("content", result_data.get("raw_content", "")),
             "sources": result_data.get("sources", []),
             "cached": True,
@@ -447,12 +528,12 @@ async def elara_screen(request: ElaraRequest):
     await manager.send_progress(session_id, "Suche Finanzdaten via Tavily...")
     if search_service:
         filters = {}
-        if request.filters:
-            if request.filters.min_market_cap:
-                filters["min_market_cap"] = request.filters.min_market_cap
-            if request.filters.region:
-                filters["region"] = request.filters.region
-        search_data = await search_service.gather_sector_data(request.sector, filters)
+        if payload.filters:
+            if payload.filters.min_market_cap:
+                filters["min_market_cap"] = payload.filters.min_market_cap
+            if payload.filters.region:
+                filters["region"] = payload.filters.region
+        search_data = await search_service.gather_sector_data(payload.sector, filters)
         context = search_data["context"]
         sources = search_data["sources"]
     else:
@@ -463,8 +544,8 @@ async def elara_screen(request: ElaraRequest):
 
     # 2. Build prompt
     filter_text = ""
-    if request.filters:
-        f = request.filters
+    if payload.filters:
+        f = payload.filters
         if f.min_market_cap is not None:
             filter_text += f"\nMindest-Marktkapitalisierung: ${f.min_market_cap:.1f}B"
         if f.region:
@@ -475,7 +556,7 @@ async def elara_screen(request: ElaraRequest):
             filter_text += f"\nAnlagehorizont: {f.horizon}"
 
     user_message = f"""SCREENING-AUFTRAG:
-Sektor/Thema: {request.sector}{filter_text}
+Sektor/Thema: {payload.sector}{filter_text}
 
 AKTUELLE WEB-DATEN (Tavily-Suche):
 {context}
@@ -495,15 +576,15 @@ Erstelle jetzt das vollständige Elara-Screening basierend auf diesen Daten."""
     if not result["success"]:
         raise HTTPException(status_code=500, detail=result.get("error", "Ollama-Fehler"))
 
-    save_elara_results(request.sector, {
+    save_elara_results(payload.sector, {
         "content": result["content"],
         "sources": sources,
-        "sector": request.sector,
+        "sector": payload.sector,
     })
     await manager.send_complete(session_id)
     return {
         "success": True,
-        "sector": request.sector,
+        "sector": payload.sector,
         "raw_content": result["content"],
         "sources": sources,
         "cached": False,
@@ -512,12 +593,13 @@ Erstelle jetzt das vollständige Elara-Screening basierend auf diesen Daten."""
 # ── Altair Deep Dive ───────────────────────────────────────────────────────────
 
 @app.post("/api/altair/analyze")
-async def altair_analyze(request: AltairRequest):
-    session_id = request.session_id
-    ticker = request.ticker.upper().strip()
+@limiter.limit("5/minute")
+async def altair_analyze(request: Request, payload: AltairRequest):
+    session_id = payload.session_id
+    ticker = payload.ticker.upper().strip()
 
     # Check cache (skip if force_refresh requested)
-    cached = None if request.force_refresh else get_altair_report(ticker)
+    cached = None if payload.force_refresh else get_altair_report(ticker)
     if cached:
         report_data = cached["report_json"]
         return {
@@ -672,15 +754,25 @@ async def get_current_user(
 ) -> Optional[str]:
     """
     Extract and validate the Supabase JWT from the Authorization header.
-    Returns the user UUID string, or None if no/invalid token.
-    Falls back gracefully when Supabase is not configured (local dev without env vars).
+
+    Behavior:
+      - When Supabase is NOT configured (local dev): returns None, allowing the
+        SQLite fallback path. Multi-user isolation is impossible without Supabase,
+        so this mode is intended for single-user dev environments only.
+      - When Supabase IS configured (production): requires a valid Bearer token.
+        Missing or invalid tokens raise HTTP 401 to prevent unauthenticated
+        access to portfolio data.
     """
-    if not authorization or not authorization.startswith("Bearer "):
-        return None
     if not supabase_db.is_configured():
+        # Dev mode: no auth available, allow SQLite fallback.
         return None
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authentication required.")
     token = authorization.removeprefix("Bearer ")
-    return supabase_db.get_user_from_token(token)
+    user_id = supabase_db.get_user_from_token(token)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+    return user_id
 
 
 def _resolve_portfolio(user_id: Optional[str]) -> Optional[str]:
@@ -977,9 +1069,10 @@ def _calculate_performance(positions: list) -> PerformanceData:
 # ── Route aliases (React frontend uses these paths) ─────────────────────────────
 
 @app.post("/api/altair/analyse")
-async def altair_analyse_alias(request: AltairRequest):
+@limiter.limit("5/minute")
+async def altair_analyse_alias(request: Request, payload: AltairRequest):
     """Alias: frontend uses /analyse (German), backend originally used /analyze."""
-    return await altair_analyze(request)
+    return await altair_analyze(request, payload)
 
 @app.get("/api/portfolio/positions")
 async def get_positions(user_id: Optional[str] = Depends(get_current_user)):
@@ -1263,7 +1356,7 @@ def _load_secrets() -> dict:
 def _save_config_field(key: str, value: str):
     cfg = load_config()
     cfg[key] = value
-    CONFIG_PATH.write_text(json.dumps(cfg, indent=2, ensure_ascii=False), encoding="utf-8")
+    save_config(cfg)
 
 @app.get("/api/keys/status")
 async def get_key_status():
@@ -1357,7 +1450,7 @@ async def save_ollama(data: dict):
     cfg = load_config()
     cfg["ollama_base_url"] = base_url
     cfg["ollama_model"] = model
-    CONFIG_PATH.write_text(json.dumps(cfg, indent=2, ensure_ascii=False), encoding="utf-8")
+    save_config(cfg)
 
     # Reinit Ollama service
     await ollama_service.close()
@@ -1474,7 +1567,8 @@ async def _tavily_search(client: httpx.AsyncClient, api_key: str, query: str) ->
 
 
 @app.post("/api/chat")
-async def chat_stream(data: dict):
+@limiter.limit("20/minute")
+async def chat_stream(request: Request, data: dict):
     """
     Investment assistant with optional Tavily research + Groq streaming.
     SSE events:
