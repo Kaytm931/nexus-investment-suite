@@ -5,6 +5,19 @@ const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:7842'
 // WebSocket base: https → wss (production), http → ws (local)
 export const WS_BASE = API_BASE.replace(/^https/, 'wss').replace(/^http/, 'ws')
 
+// Build a WebSocket URL with the Supabase access token appended as ?token=...
+// so the backend can authenticate the subscription and prevent unauthenticated
+// clients from listening to other users' progress streams.
+export async function buildWsUrl(path) {
+  const { data: { session } } = await supabase.auth.getSession()
+  const url = `${WS_BASE}${path}`
+  if (session?.access_token) {
+    const sep = url.includes('?') ? '&' : '?'
+    return `${url}${sep}token=${encodeURIComponent(session.access_token)}`
+  }
+  return url
+}
+
 async function getAuthHeaders() {
   const { data: { session } } = await supabase.auth.getSession()
   if (session?.access_token) {
