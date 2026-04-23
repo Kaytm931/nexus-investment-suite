@@ -137,6 +137,23 @@ def save_config(cfg: dict) -> None:
         encoding="utf-8",
     )
 
+# ── Simple in-memory TTL cache ────────────────────────────────────────────────
+# Used for read-heavy yFinance/Tavily lookups so repeated requests for the same
+# input don't hammer upstream APIs.
+
+_TTL_CACHE: Dict[str, tuple] = {}
+
+def cache_get(key: str):
+    entry = _TTL_CACHE.get(key)
+    if entry and entry[0] > time.monotonic():
+        return entry[1]
+    if entry:
+        _TTL_CACHE.pop(key, None)
+    return None
+
+def cache_set(key: str, value, ttl_seconds: int) -> None:
+    _TTL_CACHE[key] = (time.monotonic() + ttl_seconds, value)
+
 # ── System Prompts ─────────────────────────────────────────────────────────────
 
 ELARA_SYSTEM_PROMPT = """# System-Rolle: Project Elara v2 (Quantamental Sector Screener)
@@ -372,6 +389,8 @@ async def lifespan(app: FastAPI):
     if search_service:
         await search_service.close()
     await ollama_service.close()
+    if yf_service:
+        yf_service.close()
     print("[NEXUS] Services closed.")
 
 
@@ -1149,6 +1168,11 @@ async def search_ticker(q: str = ""):
         return []
 
     query = q.strip().upper()
+    cache_key = f"search:{query}"
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return cached
+
     suffixes = ["", ".DE", ".F", ".PA", ".L", ".AS", ".SW", ".TO", ".HK", ".T", ".MI"]
     results = []
     loop = asyncio.get_event_loop()
@@ -1180,6 +1204,7 @@ async def search_ticker(q: str = ""):
     for h in hits:
         if h and len(results) < 5:
             results.append(h)
+    cache_set(cache_key, results, ttl_seconds=3600)  # 1h
     return results
 
 # ── Market data ──────────────────────────────────────────────────────────────────
@@ -1232,6 +1257,9 @@ _MOVER_WATCHLIST = [
 @app.get("/api/market/movers")
 async def get_market_movers():
     """Return biggest intraday movers from watchlist + major index values with sparklines."""
+    cached = cache_get("market:movers")
+    if cached is not None:
+        return cached
     loop = asyncio.get_event_loop()
 
     def _get_price_change(ticker_obj):
@@ -1336,6 +1364,7 @@ async def get_market_movers():
     from concurrent.futures import ThreadPoolExecutor
     with ThreadPoolExecutor(max_workers=4) as ex:
         data = await loop.run_in_executor(ex, _fetch)
+    cache_set("market:movers", data, ttl_seconds=300)  # 5 min
     return data
 
 # ── API Key management ────────────────────────────────────────────────────────────
