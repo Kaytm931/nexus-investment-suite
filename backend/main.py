@@ -4,6 +4,7 @@ Uses Ollama (local LLM) + Tavily (web search) instead of Playwright/Perplexity.
 """
 
 import os
+import re
 import sys
 import json
 import uuid
