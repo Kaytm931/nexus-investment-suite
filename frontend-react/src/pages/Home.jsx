@@ -688,7 +688,7 @@ export default function Home() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2
-                className="text-2xl font-bold mb-1"
+                className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-1"
                 style={{ fontFamily: "'Boska', serif", color: 'var(--text)' }}
               >
                 Marktüberblick
@@ -759,7 +759,7 @@ export default function Home() {
         {/* ── Größte Bewegungen ────────────────────────────────────────── */}
         <section>
           <h2
-            className="text-2xl font-bold mb-6"
+            className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6"
             style={{ fontFamily: "'Boska', serif", color: 'var(--text)' }}
           >
             Größte Bewegungen
@@ -813,7 +813,7 @@ export default function Home() {
         <section ref={featuresRef}>
           <div className="mb-8">
             <h2
-              className="text-2xl font-bold mb-1"
+              className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-1"
               style={{ fontFamily: "'Boska', serif", color: 'var(--text)' }}
             >
               Zwei KI-Systeme. Ein Ziel.
@@ -841,7 +841,7 @@ export default function Home() {
                 </div>
                 <div>
                   <h3
-                    className="text-xl font-bold"
+                    className="text-2xl font-bold"
                     style={{ fontFamily: "'Boska', serif", color: 'var(--text)' }}
                   >
                     Elara
@@ -885,7 +885,7 @@ export default function Home() {
                 </div>
                 <div>
                   <h3
-                    className="text-xl font-bold"
+                    className="text-2xl font-bold"
                     style={{ fontFamily: "'Boska', serif", color: 'var(--text)' }}
                   >
                     Altair
