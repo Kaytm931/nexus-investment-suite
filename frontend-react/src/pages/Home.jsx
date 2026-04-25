@@ -429,15 +429,20 @@ export default function Home() {
   const featuresRef = useRef(null)
   const ctaRef = useRef(null)
 
-  // Hero entrance
+  // Hero entrance — deferred to next frame so first paint includes visible text
+  // (FCP-safe). Skipped entirely for prefers-reduced-motion.
   useGSAP(() => {
-    const tl = gsap.timeline({ defaults: { ease: 'power3.out' } })
-    tl.from('.hero-badge', { opacity: 0, y: -20, duration: 0.5 })
-      .from('.hero-line', { opacity: 0, y: 60, duration: 0.8, stagger: 0.12 }, '-=0.2')
-      .from('.hero-sub',  { opacity: 0, y: 24, duration: 0.6 }, '-=0.35')
-      .from('.hero-cta',  { opacity: 0, y: 20, duration: 0.5, stagger: 0.1 }, '-=0.3')
-      .from('.hero-stat', { opacity: 0, scale: 0.85, duration: 0.5, stagger: 0.08, ease: 'back.out(1.4)' }, '-=0.25')
-      .from('.hero-visual', { opacity: 0, x: 40, duration: 0.9, ease: 'power2.out' }, '-=0.7')
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+    const id = requestAnimationFrame(() => {
+      const tl = gsap.timeline({ defaults: { ease: 'power3.out' } })
+      tl.from('.hero-badge', { opacity: 0, y: -20, duration: 0.5 })
+        .from('.hero-line', { opacity: 0, y: 60, duration: 0.8, stagger: 0.12 }, '-=0.2')
+        .from('.hero-sub',  { opacity: 0, y: 24, duration: 0.6 }, '-=0.35')
+        .from('.hero-cta',  { opacity: 0, y: 20, duration: 0.5, stagger: 0.1 }, '-=0.3')
+        .from('.hero-stat', { opacity: 0, scale: 0.85, duration: 0.5, stagger: 0.08, ease: 'back.out(1.4)' }, '-=0.25')
+        .from('.hero-visual', { opacity: 0, x: 40, duration: 0.9, ease: 'power2.out' }, '-=0.7')
+    })
+    return () => cancelAnimationFrame(id)
   }, { scope: heroRef })
 
   // Market cards stagger on data load
