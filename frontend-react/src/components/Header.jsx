@@ -115,7 +115,7 @@ export default function Header() {
         <div className="flex items-center justify-between h-16">
 
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2.5 shrink-0">
+          <Link to="/" className="flex items-center gap-2.5 shrink-0 min-h-[44px]">
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold"
               style={{
@@ -161,7 +161,7 @@ export default function Header() {
                 key={to}
                 to={to}
                 end={exact}
-                className={({ isActive }) => `nav-link px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-200 flex items-center gap-1.5 ${isActive ? 'active' : ''}`}
+                className={({ isActive }) => `nav-link px-4 py-3 min-h-[44px] text-sm font-medium rounded-lg transition-colors duration-200 flex items-center gap-1.5 ${isActive ? 'active' : ''}`}
                 style={({ isActive }) => ({
                   color: isActive ? 'var(--primary)' : 'var(--text-muted)',
                   background: isActive ? 'rgba(79,142,247,0.08)' : 'transparent',
@@ -178,7 +178,7 @@ export default function Header() {
               <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={() => setUserMenuOpen(v => !v)}
-                  className="flex items-center gap-2 pl-3 pr-2.5 py-1.5 rounded-xl text-sm transition-all duration-200"
+                  className="flex items-center gap-2 pl-3 pr-2.5 py-2 min-h-[44px] rounded-xl text-sm transition-all duration-200"
                   style={{
                     background: 'rgba(255,255,255,0.05)',
                     border: '1px solid var(--border)',
@@ -246,15 +246,18 @@ export default function Header() {
                 )}
               </div>
             ) : (
-              <Link to="/auth" className="btn-primary py-2 px-4 text-sm">
+              // Desktop only — mobile users get "Anmelden" as the first
+              // hamburger menu item (avoids header duplication, FINDING-006).
+              <Link to="/auth" className="btn-primary hidden md:inline-flex min-h-[44px] py-2 px-4 text-sm">
                 Anmelden
               </Link>
             )}
 
             <button
-              className="md:hidden p-2 rounded-lg"
+              className="md:hidden inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded-lg"
               style={{ color: 'var(--text-muted)' }}
               onClick={() => setMobileMenuOpen(v => !v)}
+              aria-label={mobileMenuOpen ? 'Menü schließen' : 'Menü öffnen'}
             >
               {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
@@ -264,12 +267,22 @@ export default function Header() {
         {/* Mobile Nav */}
         {mobileMenuOpen && (
           <div className="md:hidden py-3 pb-4" style={{ borderTop: '1px solid var(--border)' }}>
+            {!user && (
+              <Link
+                to="/auth"
+                className="flex items-center justify-center min-h-[44px] mb-2 px-3 rounded-xl text-sm font-semibold"
+                style={{ background: 'var(--accent)', color: '#0a0f1e' }}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Anmelden
+              </Link>
+            )}
             {navLinks.map(({ to, label, exact }) => (
               <NavLink
                 key={to}
                 to={to}
                 end={exact}
-                className="block px-3 py-2.5 rounded-xl text-sm font-medium mb-0.5 transition-colors"
+                className="flex items-center min-h-[44px] px-3 rounded-xl text-sm font-medium mb-0.5 transition-colors"
                 style={({ isActive }) => ({
                   color: isActive ? 'var(--primary)' : 'var(--text-muted)',
                   background: isActive ? 'rgba(79,142,247,0.08)' : 'transparent',
