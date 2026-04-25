@@ -706,10 +706,11 @@ export default function Home() {
               {!loading && (
                 <button
                   onClick={loadData}
-                  className="flex items-center gap-1.5 text-xs transition-colors duration-200"
+                  className="inline-flex items-center gap-1.5 min-h-[44px] px-3 py-2 -mr-3 rounded-lg text-xs transition-colors duration-200"
                   style={{ color: 'var(--text-muted)' }}
                   onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
                   onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+                  aria-label="Marktdaten aktualisieren"
                 >
                   <RefreshCw size={12} /> Aktualisieren
                 </button>
